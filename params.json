@@ -1,0 +1,25 @@
+{
+    "PARAM_BOUNDS": {
+        "t_c": [
+            0,
+            3650
+        ],
+        "omega": [
+            0,
+            40
+        ],
+        "phi": [
+            0,
+            6.283185307179586
+        ],
+        "alpha": [
+            0.1,
+            0.9
+        ]
+    },
+    "NUM_POPULATIONS": 10,
+    "POPULATION_SIZE": 10,
+    "MAX_GEN": 10,
+    "STOP_GEN": 50,
+    "SELECTION_PROBABILITY": 0.9
+}
