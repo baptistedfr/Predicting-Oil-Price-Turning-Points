@@ -62,26 +62,24 @@ def select_sample(data: np.ndarray, time_start: str, time_end: str) -> np.ndarra
     -------
     np.ndarray, shape (M, 2)
         The filtered dataset, where:
-        - Column 0 is an integer index from 1..M.
+        - Column 0 is an integer index from n..n+M.
         - Column 1 is the Price (float).
         Converted to float dtype.
     """
     # Convert time_start and time_end to datetime64
     start_dt = np.datetime64(pd.to_datetime(time_start, format="%m/%d/%Y"))
     end_dt   = np.datetime64(pd.to_datetime(time_end, format="%m/%d/%Y"))
+
+    t = np.linspace(0, len(data) - 1, len(data))
+    data = np.insert(data, 0, t, axis=1)
     
     # Create a boolean mask for the date range
-    mask = (data[:, 0] >= start_dt) & (data[:, 0] <= end_dt)
-    sample_data = data[mask]
+    mask = (data[:, 1] >= start_dt) & (data[:, 1] <= end_dt)
+    sample = data[mask]
 
-    # Replace the date column with a linearly spaced index
-    sample_data_count = len(sample_data)
-    sample_data[:, 0] = np.linspace(1, sample_data_count, sample_data_count)
+    return sample[:, [0, 2]].astype(float)
 
-    return sample_data.astype(float)
-
-
-def convert_param_bounds(param_bounds_dict: dict) -> np.ndarray:
+def convert_param_bounds(param_bounds_dict: dict, sub_end: float) -> np.ndarray:
     """
     Convert a dictionary of parameter bounds into a 2D NumPy array.
 
@@ -113,7 +111,7 @@ def convert_param_bounds(param_bounds_dict: dict) -> np.ndarray:
         Each row is [min, max].
     """
     param_bounds_array = np.array([
-        [param_bounds_dict["t_c"][0],    param_bounds_dict["t_c"][1]],
+        [param_bounds_dict["t_c"][0] + sub_end,    param_bounds_dict["t_c"][1] + sub_end],
         [param_bounds_dict["omega"][0],  param_bounds_dict["omega"][1]],
         [param_bounds_dict["phi"][0],    param_bounds_dict["phi"][1]],
         [param_bounds_dict["alpha"][0],  param_bounds_dict["alpha"][1]]

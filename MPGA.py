@@ -58,13 +58,11 @@ class MPGA:
         with open("params.json", "r") as f:
             params = json.load(f)
 
-        # Convert param bounds to a (4, 2) NumPy array
-        self.PARAM_BOUNDS = convert_param_bounds(params["PARAM_BOUNDS"])
+        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
         self.NUM_POPULATIONS = params["NUM_POPULATIONS"]
         self.POPULATION_SIZE = params["POPULATION_SIZE"]
         self.MAX_GEN = params["MAX_GEN"]
         self.STOP_GEN = params["STOP_GEN"]
-        self.SELECTION_PROBABILITY = params["SELECTION_PROBABILITY"]
 
         # Generate the subintervals
         self.generate_subintervals()
@@ -88,13 +86,16 @@ class MPGA:
 
         # Loop over each subinterval
         for (sub_start, sub_end, sub_data) in self.subintervals:
+
+            param_bounds = convert_param_bounds(self.PARAM_BOUNDS, sub_end)
+
             # Random crossover and mutation probabilities per population
             crossover_prob = np.random.uniform(0.001, 0.05, size=self.NUM_POPULATIONS)
             mutation_prob = np.random.uniform(0.001, 0.05, size=self.NUM_POPULATIONS)
 
             # Initialize populations
             populations = [
-                self.initialize_population(self.PARAM_BOUNDS, self.POPULATION_SIZE)
+                self.initialize_population(param_bounds, self.POPULATION_SIZE)
                 for _ in range(self.NUM_POPULATIONS)
             ]
 
@@ -127,7 +128,7 @@ class MPGA:
                     # Crossover
                     offspring = self.crossover(selected, crossover_prob[m])
                     # Mutation
-                    mutated = self.mutate(offspring, mutation_prob[m], self.PARAM_BOUNDS)
+                    mutated = self.mutate(offspring, mutation_prob[m], param_bounds)
                     new_populations.append(mutated)
 
                 # Immigration
@@ -194,7 +195,7 @@ class MPGA:
         time_end = self.sample[-1, 0]
 
         if self.frequency == "daily":
-            freq_list = [21.0, 42.0, 7.0]
+            freq_list = [15, 30, 5]
         elif self.frequency == "weekly":
             freq_list = [3.0, 6.0, 1.0]
         elif self.frequency == "monthly":

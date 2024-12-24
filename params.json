@@ -2,7 +2,7 @@
     "PARAM_BOUNDS": {
         "t_c": [
             0,
-            3650
+            2520
         ],
         "omega": [
             0,
@@ -18,8 +18,7 @@
         ]
     },
     "NUM_POPULATIONS": 10,
-    "POPULATION_SIZE": 10,
-    "MAX_GEN": 10,
-    "STOP_GEN": 50,
-    "SELECTION_PROBABILITY": 0.9
+    "POPULATION_SIZE": 100,
+    "MAX_GEN": 500,
+    "STOP_GEN": 50
 }
