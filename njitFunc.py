@@ -25,14 +25,18 @@ def njit_initialize_population(param_bounds: np.ndarray, population_size: int) -
     """
     num_params = param_bounds.shape[0]  # D
     pop = np.empty((population_size, num_params), dtype=np.float64)
-    
-    for i in range(population_size):
-        for j in range(num_params):
-            low = param_bounds[j, 0]
-            high = param_bounds[j, 1]
-            pop[i, j] = np.random.uniform(low, high)
-    
+
+    for i, bounds in enumerate(param_bounds): 
+        pop[:, i] = np.random.uniform(bounds[0], bounds[1], size=population_size)
     return pop
+
+    # for i in range(population_size):
+    #     for j in range(num_params):
+    #         low = param_bounds[j, 0]
+    #         high = param_bounds[j, 1]
+    #         pop[i, j] = np.random.uniform(low, high)
+    
+    # return pop
 
 @njit
 def njit_selection(population: np.ndarray, fitness: np.ndarray) -> np.ndarray:
@@ -58,16 +62,19 @@ def njit_selection(population: np.ndarray, fitness: np.ndarray) -> np.ndarray:
 
     for k in range(n):
         # Pick two random indices in [0, n)
-        i = np.random.randint(0, n)
-        j = np.random.randint(0, n)
+        i, j = np.random.randint(0, n, size=2)
         
         # Select the better chromosome (lower fitness)
         if fitness[i] < fitness[j]:
-            for col in range(num_params):
-                selected[k, col] = population[i, col]
+            selected[k, :] = population[i, :]
         else:
-            for col in range(num_params):
-                selected[k, col] = population[j, col]
+            selected[k, :] = population[j, :]
+        # if fitness[i] < fitness[j]:
+        #     for col in range(num_params):
+        #         selected[k, col] = population[i, col]
+        # else:
+        #     for col in range(num_params):
+        #         selected[k, col] = population[j, col]
 
     return selected
 
@@ -88,37 +95,42 @@ def njit_crossover(parents: np.ndarray, prob: float) -> np.ndarray:
     np.ndarray, shape (N, D)
         Offspring population after crossover.
     """
-    n = parents.shape[0]
-    d = parents.shape[1]
-    offspring = np.empty((n, d), dtype=np.float64)
+    n, d = parents.shape
+    offspring = parents.copy()
 
     # Process pairs of parents
-    for i in range(0, n, 2):
-        if i + 1 >= n:
-            # If there's an odd number of parents, copy the last one as is
-            for col in range(d):
-                offspring[i, col] = parents[i, col]
-            break
+    # for i in range(0, n, 2):
+    #     if i + 1 >= n:
+    #         # If there's an odd number of parents, copy the last one as is
+    #         # for col in range(d):
+    #         #     offspring[i, col] = parents[i, col]
+    #         offspring[i, :] = parents[i, :]
+    #         break
 
-        # Decide whether to crossover
+    #     # Decide whether to crossover
+    #     if np.random.rand() < prob:
+    #         cp = np.random.randint(1, d)  # single crossover point
+    #         # Child1
+    #         for col in range(cp):
+    #             offspring[i, col] = parents[i, col]
+    #         for col in range(cp, d):
+    #             offspring[i, col] = parents[i+1, col]
+    #         # Child2
+    #         for col in range(cp):
+    #             offspring[i+1, col] = parents[i+1, col]
+    #         for col in range(cp, d):
+    #             offspring[i+1, col] = parents[i, col]
+    #     else:
+    #         # No crossover -> copy parents as-is
+    #         # for col in range(d):
+    #         #     offspring[i, col] = parents[i, col]
+    #         #     offspring[i+1, col] = parents[i+1, col]
+    #         offspring[i, :] = parents[i, :]
+    #         offspring[i+1, :] = parents[i+1, :]
+    for i in range(0, n - 1, 2):
         if np.random.rand() < prob:
-            cp = np.random.randint(1, d)  # single crossover point
-            # Child1
-            for col in range(cp):
-                offspring[i, col] = parents[i, col]
-            for col in range(cp, d):
-                offspring[i, col] = parents[i+1, col]
-            # Child2
-            for col in range(cp):
-                offspring[i+1, col] = parents[i+1, col]
-            for col in range(cp, d):
-                offspring[i+1, col] = parents[i, col]
-        else:
-            # No crossover -> copy parents as-is
-            for col in range(d):
-                offspring[i, col] = parents[i, col]
-                offspring[i+1, col] = parents[i+1, col]
-
+            cp = np.random.randint(1, d)  # Point de croisement
+            offspring[i, cp:], offspring[i+1, cp:] = parents[i+1, cp:], parents[i, cp:]  # Croisement en une ligne
     return offspring
 
 @njit
@@ -140,11 +152,11 @@ def njit_mutate(offspring: np.ndarray, prob: float, param_bounds: np.ndarray) ->
     np.ndarray, shape (N, D)
         Mutated population, in-place.
     """
-    n = offspring.shape[0]
-    d = offspring.shape[1]
-
+    n, d = offspring.shape
+    mutation_mask = np.random.rand(n) < prob
     for i in range(n):
-        if np.random.rand() < prob:
+        # if np.random.rand() < prob:
+        if mutation_mask[i]:
             # pick a random parameter index
             mp = np.random.randint(d)
             low = param_bounds[mp, 0]
@@ -175,15 +187,14 @@ def njit_immigration_operation(populations: np.ndarray, fitness_values: np.ndarr
     # We assume populations.shape[0] = fitness_values.shape[0]
     # and populations.shape[1] = fitness_values.shape[1]
     for m in range(len(populations) - 1):
-        f = fitness_values[m]
-        best_idx = np.argmin(f)
-        # Copy best chrom from pop m
-        best_chrom = populations[m][best_idx]
+        best_idx = np.argmin(fitness_values[m])
+        worst_idx = np.argmax(fitness_values[m+1])
+        populations[m+1][worst_idx, :] = populations[m][best_idx, :]
+        # # Copy best chrom from pop m
+        # best_chrom = populations[m][best_idx]
 
-        f_next = fitness_values[m+1]
-        worst_idx = np.argmax(f_next)
-        # Overwrite the worst in pop m+1
-        populations[m+1][worst_idx] = best_chrom
+        # # Overwrite the worst in pop m+1
+        # populations[m+1][worst_idx] = best_chrom
     return populations
 
 @njit
@@ -246,3 +257,4 @@ def njit_calculate_fitness(population: np.ndarray, data: np.ndarray) -> np.ndarr
     for i in range(n):
         fitness[i] = njit_RSS(population[i], data)
     return fitness
+    

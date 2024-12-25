@@ -105,7 +105,8 @@ class MPGA:
             bestChrom = None
 
             for m in range(self.NUM_POPULATIONS):
-                fit = self.calculate_fitness(populations[m], sub_data)
+                fit = np.array([self.RSS(ch, sub_data) for ch in populations[m]])
+                #fit = self.calculate_fitness(populations[m], sub_data)
                 fitness_values.append(fit)
                 local_min = np.min(fit)
                 if local_min < bestObjV:
@@ -195,13 +196,13 @@ class MPGA:
         time_end = self.sample[-1, 0]
 
         if self.frequency == "daily":
-            freq_list = [15, 30, 5]
+            freq_list = [5, 15, 30]
         elif self.frequency == "weekly":
-            freq_list = [3.0, 6.0, 1.0]
+            freq_list = [1.0, 3.0, 6.0]
         elif self.frequency == "monthly":
-            freq_list = [0.75, 1.5, 0.25]
+            freq_list = [0.25, 0.75, 1.5]
 
-        three_weeks, six_weeks, one_week = freq_list
+        one_week, three_weeks, six_weeks  = freq_list
         total_days = (time_end - time_start)
         delta = max((total_days * 0.75) / three_weeks, three_weeks)
 
