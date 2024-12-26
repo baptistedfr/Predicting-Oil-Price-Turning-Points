@@ -29,46 +29,45 @@ A \\
 B \\
 C
 \end{pmatrix}
-=
-[(V^T_{3 \times J} \dot V_{J \times 3})^{-1} (V^T_{3 \times J} \dot V_{J \times 1})]_{3 \times 1}
+= \\left[(V^T_{3 \times J} \cdot V_{J \times 3})^{-1} (V^T_{3 \times J} \cdot Y_{J \times 1})\\right]_{3 \times 1}
 \ \ \ \ (4)
 $$
 
 where 
-$
-V_{J \times 3} = 
-\begin{pmatrix}
- 1 & f_1 & g_1 \\ 
- 1 & f_2 & g_2 \\ 
- . & . & . \\
- . & . & . \\
- . & . & . \\
- 1 & f_J & g_J 
+
+$$
+V_{J \times 3} = \begin{pmatrix}
+1 & f_1 & g_1 \\
+1 & f_2 & g_2 \\
+. & . & . \\
+. & . & . \\
+. & . & . \\
+1 & f_J & g_J
 \end{pmatrix}_{J \times 3}
-$
-, which is a matrix with $J$ rows and 3 columns.
+$$
 
+is a matrix with \( J \) rows and 3 columns.
 
-$
-Y_{J \times 1} = 
-\begin{pmatrix}
-y(1) \\ 
-y(2) \\ 
- . \\
- . \\
- . \\
+$$
+Y_{J \times 1} = \begin{pmatrix}
+y(1) \\
+y(2) \\
+. \\
+. \\
+. \\
 y(J)
 \end{pmatrix}_{J \times 1}
-$
-, which is a column vector with $J$ rows.
+$$
+
+is a column vector with \( J \) rows.
+
 
 $$
 \begin{pmatrix}
 A \\
 B \\
 C
-\end{pmatrix}
-= 
+\end{pmatrix} = 
 \begin{pmatrix}
 J & \sum_{j=1}^{J} f_j & \sum_{j=1}^{J} g_j \\
 \sum_{j=1}^{J} f_j & \sum_{j=1}^{J} f_j^2 & \sum_{j=1}^{J} f_j g_j \\
@@ -79,7 +78,8 @@ J & \sum_{j=1}^{J} f_j & \sum_{j=1}^{J} g_j \\
 \sum_{j=1}^{J} y(j) f_j \\
 \sum_{j=1}^{J} y(j) g_j
 \end{pmatrix}
-\ \ \ \ (5)$$
+\ \ \ \ (5)
+$$
 
 This approach is proven to be very stable and able to yield good estimation of the linear parameters A, B and C.
 
@@ -142,11 +142,11 @@ There is many existing methods but the Lomb periodogram analysis method is not o
 The validation process starts with pre-setting the frequency series ($freq_i$) ($i = 1, 2, ... , M$) with $M$ as the length of the pre-given frequency series. For a given frequency $f$, the power spectral density $P(f)$ can be computed by the Lomb periodogram analysis as below:
 
 $$
-P(f) = \frac{1}{2\sigma^2} \left\{
-\frac{\left( \sum_{j=1}^{J} (x_j - \bar{x}) \cos \left( 2\pi f (t_j - \tau) \right) \right)^2}{\sum_{j=1}^{J} \cos^2 \left( 2\pi f (t_j - \tau) \right)}
+P(f) = \frac{1}{2\sigma^2} \Bigg(
+\frac{\left( \sum_{j=1}^{J} (x_j - \bar{x}) \cos \big( 2\pi f (t_j - \tau) \big) \right)^2}{\sum_{j=1}^{J} \cos^2 \big( 2\pi f (t_j - \tau) \big)}
 +
-\frac{\left( \sum_{j=1}^{J} (x_j - \bar{x}) \sin \left( 2\pi f (t_j - \tau) \right) \right)^2}{\sum_{j=1}^{J} \sin^2 \left( 2\pi f (t_j - \tau) \right)}
-\right\}
+\frac{\left( \sum_{j=1}^{J} (x_j - \bar{x}) \sin \big( 2\pi f (t_j - \tau) \big) \right)^2}{\sum_{j=1}^{J} \sin^2 \big( 2\pi f (t_j - \tau) \big)}
+\Bigg)
 $$
 
 where $$x_j = y_j - A - B(t_c - t_j)^\alpha$$ 
