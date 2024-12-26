@@ -31,7 +31,8 @@ C
 \end{pmatrix}
 =
 [(V^T_{3 \times J} \dot V_{J \times 3})^{-1} (V^T_{3 \times J} \dot V_{J \times 1})]_{3 \times 1}
-\ \ \ \ (4)$$
+\ \ \ \ (4)
+$$
 
 where 
 $
