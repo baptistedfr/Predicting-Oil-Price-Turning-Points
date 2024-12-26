@@ -4,9 +4,9 @@ import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from Lib.Optimizers import Optimizer
-from Lib.LombAnalysis import LombAnalysis
-from Lib.LPPL import LPPL
+from .Optimizers import Optimizer
+from .LombAnalysis import LombAnalysis
+from .LPPL import LPPL
 
 class Framework:
     """
@@ -63,7 +63,7 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        data = pd.read_csv(f'WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
+        data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
         data.columns = ["Date", "Price"]
 
         # Date conversion and sorting

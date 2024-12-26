@@ -1,16 +1,19 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
-from GQLib.LPPL import LPPL
+from .LPPL import LPPL
 import json
-from GQLib.njitFunc import (
+from .njitFunc import (
     njit_calculate_fitness,
     njit_selection,
     njit_crossover,
     njit_immigration_operation,
     njit_mutate,
-    njit_initialize_population
+    njit_initialize_population,
+    njit_update_velocity,
+    njit_update_position
 )
+import random
 
 class Optimizer(ABC):
     """
@@ -178,6 +181,87 @@ class MPGA(Optimizer):
 
         return bestObjV, bestChrom
 
+class PSO(Optimizer):
+    """
+    Particule Swarm Optimisation for optimizing LPPL parameters.
+
+    This optimizer evolves multiple swarm to minimize the Residual Sum of Squares (RSS).
+    """
+
+    def __init__(self, frequency: str) -> None:
+        """
+        Initialize the PSO optimizer.
+
+        Parameters
+        ----------
+        frequency : str
+            The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
+
+        Raises
+        ------
+        ValueError
+            If frequency is not one of the accepted values.
+        """
+        self.frequency = frequency
+
+        # Load optimization parameters from a JSON configuration file
+        with open("params_pso.json", "r") as f:
+            params = json.load(f)
+
+        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
+        self.NUM_PARTICULES = params["NUM_PARTICULES"]
+        self.MAX_GEN = params["MAX_GEN"]
+
+    def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
+        """
+        Fit LPPL parameters using the MPGA optimizer.
+
+        Parameters
+        ----------
+        start : int
+            The start index of the subinterval.
+        end : int
+            The end index of the subinterval.
+        data : np.ndarray
+            A 2D array of shape (J, 2), where:
+                - Column 0 is time.
+                - Column 1 is the observed price.
+
+        Returns
+        -------
+        Tuple[float, np.ndarray]
+            - Best fitness value (RSS) as a float.
+            - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
+        """
+        param_bounds = self.convert_param_bounds(end)
+
+        # Initialize particules and calculate initial fitness values
+        particules = [
+            Particule(param_bounds, data)
+            for _ in range(self.NUM_PARTICULES)
+        ]
+        # Compute global best initial fitness values
+        best_particle : Particule = min(particules, key=lambda p: p.best_local_fitness)
+        global_best_fitness = best_particle.best_local_fitness
+        global_best_solution = best_particle.best_position
+
+        current = 0
+        while current <= self.MAX_GEN:
+            '''
+            Boucle principale iterrant les particules
+            '''
+            for m in range(self.NUM_PARTICULES):
+                particules[m].update_position_fitness(global_best_solution, data)
+                
+            best_particle : Particule = min(particules, key=lambda p: p.best_local_fitness)
+            if best_particle.best_local_fitness < global_best_fitness: #Update Global Best
+                global_best_fitness = best_particle.best_local_fitness
+                global_best_solution = best_particle.best_position
+            current+=1
+        
+        return global_best_fitness, global_best_solution
+
+
     def convert_param_bounds(self, end: float) -> np.ndarray:
         """
         Convert parameter bounds to a NumPy array format.
@@ -198,113 +282,55 @@ class MPGA(Optimizer):
             [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
+    
+class Particule():
 
-    def initialize_population(self, param_bounds: np.ndarray, population_size: int) -> np.ndarray:
+    def __init__(self, param_bounds, data):
         """
-        Initialize a population of chromosomes.
-
+        Initialize a particule for PSO in nopython mode with Numba.
+        
         Parameters
         ----------
-        param_bounds : np.ndarray
-            Bounds for each parameter, shape (4, 2).
-        population_size : int
-            Number of individuals in the population.
+        param_bounds : np.ndarray, shape (D, 2)
+            Rows correspond to each parameter [low, high].
+            For instance, if we have 4 parameters:
+                param_bounds[0] = [t_c_min, t_c_max]
+                param_bounds[1] = [omega_min, omega_max]
+                param_bounds[2] = [phi_min, phi_max]
+                param_bounds[3] = [alpha_min, alpha_max]
 
-        Returns
-        -------
-        np.ndarray
-            A randomly initialized population of chromosomes.
         """
-        return njit_initialize_population(param_bounds, population_size)
+        num_params = param_bounds.shape[0]  # D
+        self.position = np.empty(num_params, dtype=np.float64)
 
-    def selection(self, population: np.ndarray, fitness: np.ndarray) -> np.ndarray:
-        """
-        Perform tournament selection.
+        for i, bounds in enumerate(param_bounds): 
+            self.position[i] = np.random.uniform(bounds[0], bounds[1])
+        
+        self.best_position = None
+        self.best_local_fitness = None
+        self.compute_fitness(data)
 
-        Parameters
-        ----------
-        population : np.ndarray
-            Population array of shape (N, 4).
-        fitness : np.ndarray
-            Fitness array of shape (N,).
+        self.velocity = np.zeros(num_params)
+        self.w = 1
+        self.c1 = 1
+        self.c2 = 1
+    
+    def compute_fitness(self, data):
+        fit = LPPL.numba_RSS(self.position, data)
+        if self.best_position is not None:
+            if fit < self.best_local_fitness: # On actualise le minimum local
+                self.best_position = self.position
+                self.best_local_fitness = fit
+        else: # Cas d'initialisation
+            self.best_position = self.position
+            self.best_local_fitness = fit
 
-        Returns
-        -------
-        np.ndarray
-            Selected individuals for the next generation.
-        """
-        return njit_selection(population, fitness)
+    def update_position_fitness(self, global_best, data):
+        self.velocity = njit_update_velocity(self.velocity, self.position, self.best_position, global_best, self.w, self.c1, self.c2)
+        self.position = njit_update_position(self.position, self.velocity)
+        
+        self.compute_fitness(data)
+    
+    
+        
 
-    def crossover(self, parents: np.ndarray, prob: float) -> np.ndarray:
-        """
-        Perform single-point crossover on the population.
-
-        Parameters
-        ----------
-        parents : np.ndarray
-            Parent population, shape (N, 4).
-        prob : float
-            Probability of crossover.
-
-        Returns
-        -------
-        np.ndarray
-            Offspring population.
-        """
-        return njit_crossover(parents, prob)
-
-    def mutate(self, offspring: np.ndarray, prob: float, param_bounds: np.ndarray) -> np.ndarray:
-        """
-        Apply mutation to the offspring.
-
-        Parameters
-        ----------
-        offspring : np.ndarray
-            Offspring population, shape (N, 4).
-        prob : float
-            Mutation probability.
-        param_bounds : np.ndarray
-            Bounds for each parameter.
-
-        Returns
-        -------
-        np.ndarray
-            Mutated population.
-        """
-        return njit_mutate(offspring, prob, param_bounds)
-
-    def immigration_operation(self, populations: list[np.ndarray], fitness_values: list[np.ndarray]) -> list[np.ndarray]:
-        """
-        Perform the immigration operation between populations.
-
-        Parameters
-        ----------
-        populations : list of np.ndarray
-            List of populations, one per subinterval.
-        fitness_values : list of np.ndarray
-            List of fitness values for each population.
-
-        Returns
-        -------
-        list of np.ndarray
-            Updated populations after immigration.
-        """
-        return njit_immigration_operation(populations, fitness_values)
-
-    def calculate_fitness(self, population: np.ndarray, data: np.ndarray) -> np.ndarray:
-        """
-        Calculate the RSS fitness for each individual in the population.
-
-        Parameters
-        ----------
-        population : np.ndarray
-            Population array, shape (N, 4).
-        data : np.ndarray
-            Subinterval data, shape (J, 2).
-
-        Returns
-        -------
-        np.ndarray
-            RSS fitness values for the population.
-        """
-        return njit_calculate_fitness(population, data)

@@ -1,7 +1,7 @@
 import numpy as np
 from numba import njit
 from matplotlib import pyplot as plt
-from GQLib.njitFunc import njit_RSS
+from .njitFunc import njit_RSS
 
 class LPPL:
     """

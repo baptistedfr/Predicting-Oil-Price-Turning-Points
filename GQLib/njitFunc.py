@@ -257,4 +257,39 @@ def njit_calculate_fitness(population: np.ndarray, data: np.ndarray) -> np.ndarr
     for i in range(n):
         fitness[i] = njit_RSS(population[i], data)
     return fitness
-    
+
+@njit
+def njit_update_velocity(velocity, position, local_min, global_best, w, c1, c2):
+    """
+    Update the velocity of a particle in a swarm optimization process.
+
+    Parameters
+    ----------
+    velocity : np.ndarray
+        Current velocity of the particle.
+    position : np.ndarray
+        Current position of the particle.
+    local_min : np.ndarray
+        Best position found by the particle.
+    global_best : np.ndarray
+        Best position found by the swarm.
+    w : float
+        Inertia weight.
+    c1 : float
+        Cognitive coefficient.
+    c2 : float
+        Social coefficient.
+
+    Returns
+    -------
+    np.ndarray
+        Updated velocity of the particle.
+    """
+    r1, r2 = np.random.uniform(0, 1, size=2)  # Random factors
+    new_velocity = w * velocity + r1 * c1 * (local_min - position) + r2 * c2 * (global_best - position)
+    return new_velocity
+
+@njit
+def njit_update_position(position, velocity):
+    return position + velocity
+
