@@ -118,3 +118,12 @@ def convert_param_bounds(param_bounds_dict: dict, sub_end: float) -> np.ndarray:
     ], dtype=np.float64)
     
     return param_bounds_array
+
+def retrieve_dates(data: np.ndarray, sample: np.ndarray) -> np.ndarray:
+    indices = sample.astype(int)  # Convert to 0-based indices
+    dates = data[indices, 0]  # Retrieve the dates from the original data
+
+    # Replace the numeric indices with dates
+    # result = np.column_stack((dates, sample[:, 1]))
+
+    return dates

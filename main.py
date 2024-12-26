@@ -14,8 +14,7 @@ sample = select_sample(data, time_start, time_end)
 mpga = MPGA(sample, "daily")
 
 results = mpga.fit()
-end = time.time()
-print(start-end)
+print(time.time()-start)
 # Save results to a JSON file
-with open("results-test.json", "w") as f:
-    json.dump(results, f, indent=4)
+# with open("results-test.json", "w") as f:
+#     json.dump(results, f, indent=4)
