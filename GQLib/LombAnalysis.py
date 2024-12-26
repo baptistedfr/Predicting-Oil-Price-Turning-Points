@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
-from Lib.LPPL import LPPL
+from GQLib.LPPL import LPPL
 
 class LombAnalysis:
     """
@@ -13,7 +13,7 @@ class LombAnalysis:
 
     def __init__(self,
                  lppl: LPPL,
-                 freqs: np.ndarray = np.linspace(0.0001, 1, 1000),
+                 freqs: np.ndarray = np.linspace(0.0001, 1.0, 1000),
                  significance_level: float = 0.95):
         """
         Initialize the LombAnalysis instance.
@@ -46,6 +46,30 @@ class LombAnalysis:
         self.critical_value = None  # Will store the significance threshold
         self.filtered_freqs = None  # After filtering
         self.filtered_power = None
+
+    def show_residuals(self, ax=None, show: bool = False) -> None:
+        """
+        Visualize the residuals of the LPPL model.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis object to use for the plot (default: None).
+        show : bool
+            Whether to display the plot (default: False).
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.plot(self.lppl.t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        ax.plot(self.lppl.t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Residuals")
+        ax.set_title("LPPL Residuals")
+        ax.legend()
+
+        if show:
+            plt.show()
     
     def compute_lomb_periodogram(self, use_package: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """

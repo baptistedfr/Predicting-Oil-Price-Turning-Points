@@ -4,9 +4,9 @@ import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from Lib.Optimizers import Optimizer
-from Lib.LombAnalysis import LombAnalysis
-from Lib.LPPL import LPPL
+from GQLib.Optimizers import Optimizer
+from GQLib.LombAnalysis import LombAnalysis
+from GQLib.LPPL import LPPL
 
 class Framework:
     """
@@ -167,7 +167,7 @@ class Framework:
         # Visualizations if requested
         if show:
             num_intervals = len(self.results)
-            num_cols = 2
+            num_cols = 3
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
@@ -184,13 +184,20 @@ class Framework:
             is_significant = lomb.check_significance()
 
             if show:
-                ax_spectrum = axes[idx, 0]
+
+                ax_residuals = axes[idx, 0]
+                lomb.show_residuals(ax=ax_residuals)
+                ax_residuals.set_title(f'Subinterval {idx + 1} Residuals')
+            
+                ax_spectrum = axes[idx, 1]
                 lomb.show_spectrum(ax=ax_spectrum, use_filtered=False, show_threshold=True, highlight_freq=True)
                 ax_spectrum.set_title(f'Subinterval {idx + 1} Spectrum (Significant: {is_significant})')
 
-                ax_lppl = axes[idx, 1]
+                ax_lppl = axes[idx, 2]
                 self.show_lppl(lomb.lppl, ax=ax_lppl)
                 ax_lppl.set_title(f'Subinterval {idx + 1} LPPL')
+
+
 
             self.best_results.append({
                 "sub_start": res["sub_start"],
