@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
 from GQLib.LPPL import LPPL
+import json
 
 class LombAnalysis:
     """
@@ -13,7 +14,7 @@ class LombAnalysis:
 
     def __init__(self,
                  lppl: LPPL,
-                 freqs: np.ndarray = np.linspace(0.0001, 1.0, 1000),
+                 freqs: np.ndarray = np.linspace(0.0001, 20, 1000),
                  significance_level: float = 0.95):
         """
         Initialize the LombAnalysis instance.
@@ -60,6 +61,14 @@ class LombAnalysis:
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
+
+        test = self.lppl.compute_residuals(False)
+
+        # test to list into a json
+        test_list = test.tolist()
+
+        with open('residuals.json', 'w') as f:
+            json.dump(test_list, f)
 
         ax.plot(self.lppl.t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
         ax.plot(self.lppl.t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")

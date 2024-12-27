@@ -133,6 +133,7 @@ class Framework:
 
     def analyze(self,
                 result_json_name: dict = None,
+                use_package: bool = False,
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
                 show: bool = False) -> dict:
@@ -172,14 +173,14 @@ class Framework:
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
         for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
-            tc, alpha, omega, phi = res["bestParams"]
+            tc, omega, phi, alpha = res["bestParams"]
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, alpha, omega, phi))
-            lomb.compute_lomb_periodogram()
+            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, omega, phi, alpha))
+            lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
 
