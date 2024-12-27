@@ -191,7 +191,7 @@ class Framework:
                 ax_residuals.set_title(f'Subinterval {idx + 1} Residuals')
             
                 ax_spectrum = axes[idx, 1]
-                lomb.show_spectrum(ax=ax_spectrum, use_filtered=False, show_threshold=True, highlight_freq=True)
+                lomb.show_spectrum(ax=ax_spectrum, use_filtered=True, show_threshold=True, highlight_freq=True)
                 ax_spectrum.set_title(f'Subinterval {idx + 1} Spectrum (Significant: {is_significant})')
 
                 ax_lppl = axes[idx, 2]
