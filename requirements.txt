@@ -3,3 +3,6 @@ numpy
 scikit-learn
 scipy
 plotly
+numba
+tdqm
+astropy
