@@ -4,9 +4,9 @@ import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from .Optimizers import Optimizer
-from .LombAnalysis import LombAnalysis
-from .LPPL import LPPL
+from GQLib.Optimizers import Optimizer
+from GQLib.LombAnalysis import LombAnalysis
+from GQLib.LPPL import LPPL
 
 class Framework:
     """
@@ -133,6 +133,7 @@ class Framework:
 
     def analyze(self,
                 result_json_name: dict = None,
+                use_package: bool = False,
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
                 show: bool = False) -> dict:
@@ -167,30 +168,37 @@ class Framework:
         # Visualizations if requested
         if show:
             num_intervals = len(self.results)
-            num_cols = 2
+            num_cols = 3
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
         for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
-            tc, alpha, omega, phi = res["bestParams"]
+            tc, omega, phi, alpha = res["bestParams"]
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, alpha, omega, phi))
-            lomb.compute_lomb_periodogram()
+            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, omega, phi, alpha))
+            lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
 
             if show:
-                ax_spectrum = axes[idx, 0]
-                lomb.show_spectrum(ax=ax_spectrum, use_filtered=False, show_threshold=True, highlight_freq=True)
+
+                ax_residuals = axes[idx, 0]
+                lomb.show_residuals(ax=ax_residuals)
+                ax_residuals.set_title(f'Subinterval {idx + 1} Residuals')
+            
+                ax_spectrum = axes[idx, 1]
+                lomb.show_spectrum(ax=ax_spectrum, use_filtered=True, show_threshold=True, highlight_freq=True)
                 ax_spectrum.set_title(f'Subinterval {idx + 1} Spectrum (Significant: {is_significant})')
 
-                ax_lppl = axes[idx, 1]
+                ax_lppl = axes[idx, 2]
                 self.show_lppl(lomb.lppl, ax=ax_lppl)
                 ax_lppl.set_title(f'Subinterval {idx + 1} LPPL')
+
+
 
             self.best_results.append({
                 "sub_start": res["sub_start"],

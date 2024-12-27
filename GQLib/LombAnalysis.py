@@ -13,7 +13,7 @@ class LombAnalysis:
 
     def __init__(self,
                  lppl: LPPL,
-                 freqs: np.ndarray = np.linspace(0.0001, 1, 1000),
+                 freqs: np.ndarray = np.linspace(0.0001, 20, 1000),
                  significance_level: float = 0.95):
         """
         Initialize the LombAnalysis instance.
@@ -46,6 +46,44 @@ class LombAnalysis:
         self.critical_value = None  # Will store the significance threshold
         self.filtered_freqs = None  # After filtering
         self.filtered_power = None
+
+    def compute_ln_tc_tau(self) -> np.ndarray:
+
+        dt = np.abs(self.lppl.tc - self.lppl.t)
+        return np.log(dt)
+
+
+    def show_residuals(self, ax=None, show: bool = False) -> None:
+        """
+        Visualize the residuals of the LPPL model.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis object to use for the plot (default: None).
+        show : bool
+            Whether to display the plot (default: False).
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+        test = self.lppl.compute_residuals(False)
+
+        # test to list into a json
+        test_list = test.tolist()
+
+        with open('residuals.json', 'w') as f:
+            json.dump(test_list, f)
+
+        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.set_xlabel("Time (ln(tc - t))")
+        ax.set_ylabel("Residuals")
+        ax.set_title("LPPL Residuals")
+        ax.legend()
+
+        if show:
+            plt.show()
     
     def compute_lomb_periodogram(self, use_package: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -66,24 +104,27 @@ class LombAnalysis:
         ValueError
             If the time series or residuals are not properly initialized.
         """
+
+        self.new_t = self.compute_ln_tc_tau()
+
         if use_package:
-            ls = LombScargle(self.lppl.t, self.x)
+            ls = LombScargle(self.new_t, self.x)
             self.power = ls.power(self.freqs)
         else:
-            J = len(self.lppl.t)
+            J = len(self.new_t)
             mean_x = 1/J * np.sum(self.x)  # Mean of x
             var_x = 1/(J-1) * np.sum((self.x - mean_x) ** 2)  # Variance of x
             self.power = []
 
             for f in self.freqs:
-                sin_term = np.sum(np.sin(4 * np.pi * f * self.lppl.t))
-                cos_term = np.sum(np.cos(4 * np.pi * f * self.lppl.t))
+                sin_term = np.sum(np.sin(4 * np.pi * f * self.new_t))
+                cos_term = np.sum(np.cos(4 * np.pi * f * self.new_t))
                 t_offset = (1 / (4 * np.pi * f)) * np.arctan(sin_term / cos_term)
 
-                cos_num = np.sum((self.x - mean_x) * np.cos(2 * np.pi * f * (self.lppl.t - t_offset))) ** 2
-                cos_denom = np.sum(np.cos(2 * np.pi * f * (self.lppl.t - t_offset)) ** 2)
-                sin_num = np.sum((self.x - mean_x) * np.sin(2 * np.pi * f * (self.lppl.t - t_offset))) ** 2
-                sin_denom = np.sum(np.sin(2 * np.pi * f * (self.lppl.t - t_offset)) ** 2)
+                cos_num = np.sum((self.x - mean_x) * np.cos(2 * np.pi * f * (self.new_t - t_offset))) ** 2
+                cos_denom = np.sum(np.cos(2 * np.pi * f * (self.new_t - t_offset)) ** 2)
+                sin_num = np.sum((self.x - mean_x) * np.sin(2 * np.pi * f * (self.new_t - t_offset))) ** 2
+                sin_denom = np.sum(np.sin(2 * np.pi * f * (self.new_t - t_offset)) ** 2)
                 power_value = (cos_num / cos_denom + sin_num / sin_denom) / (2 * var_x)
                 self.power.append(power_value)
 
@@ -240,7 +281,6 @@ class LombAnalysis:
             
 
         ax.legend()
-        ax.set_yscale('log')
 
         if show:
             plt.show()

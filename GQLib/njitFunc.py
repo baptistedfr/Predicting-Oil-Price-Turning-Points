@@ -217,7 +217,7 @@ def njit_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
     """
     y = data[:, 1]
     t = data[:, 0]
-    t_c, alpha, omega, phi = chromosome
+    t_c, omega, phi, alpha = chromosome
 
     dt = t_c - t
     f = dt ** alpha
