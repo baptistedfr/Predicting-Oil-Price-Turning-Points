@@ -223,7 +223,7 @@ class Framework:
         file_name : str
             Path to the output JSON file.
         """
-        with open(file_name, "w") as f:
+        with open(f"results\\{file_name}", "w") as f:
             json.dump(results, f, indent=4)
 
     def show_lppl(self, lppl: LPPL, ax=None, show: bool = False) -> None:
