@@ -17,6 +17,6 @@
             0.9
         ]
     },
-    "NUM_PARTICULES": 100,
+    "NUM_PARTICLES": 100,
     "MAX_GEN": 500
 }

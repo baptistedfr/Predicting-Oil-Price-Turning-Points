@@ -259,19 +259,20 @@ def njit_calculate_fitness(population: np.ndarray, data: np.ndarray) -> np.ndarr
     return fitness
 
 @njit
-def njit_update_velocity(velocity, position, local_min, global_best, w, c1, c2):
+def njit_update_velocity(current_velocity: np.ndarray, current_position: np.ndarray, local_min_position: np.ndarray, 
+                         global_best_position: np.ndarray, w: float, c1: float, c2: float) -> np.ndarray:
     """
     Update the velocity of a particle in a swarm optimization process.
 
     Parameters
     ----------
-    velocity : np.ndarray
+    current_velocity : np.ndarray
         Current velocity of the particle.
-    position : np.ndarray
+    current_position : np.ndarray
         Current position of the particle.
-    local_min : np.ndarray
+    local_min_position : np.ndarray
         Best position found by the particle.
-    global_best : np.ndarray
+    global_best_position : np.ndarray
         Best position found by the swarm.
     w : float
         Inertia weight.
@@ -286,14 +287,33 @@ def njit_update_velocity(velocity, position, local_min, global_best, w, c1, c2):
         Updated velocity of the particle.
     """
     r1, r2 = np.random.uniform(0, 1, size=2)  # Random factors
-    new_velocity = w * velocity + r1 * c1 * (local_min - position) + r2 * c2 * (global_best - position)
+    new_velocity = w * current_velocity + r1 * c1 * (local_min_position - current_position) + r2 * c2 * (global_best_position - current_position)
     return new_velocity
 
 @njit
-def njit_update_position(position, velocity, param_bounds):
-    updated_position = position + velocity
+def njit_update_position(new_velocity: np.ndarray, current_position: np.ndarray, param_bounds: np.ndarray) -> np.ndarray:
+    """
+    Update the position of the particule with the new velocity.
+
+    Parameters
+        ----------
+        new_velocity : np.ndarray
+            New velocity of the particle.
+        current_position : np.ndarray
+            Current position of the particle.
+        param_bounds : np.ndarray, shape (D, 2)
+            Rows correspond to each parameter [low, high].
+            For instance, if we have 4 parameters:
+                param_bounds[0] = [t_c_min, t_c_max]
+                param_bounds[1] = [omega_min, omega_max]
+                param_bounds[2] = [phi_min, phi_max]
+                param_bounds[3] = [alpha_min, alpha_max]
+    """
+    updated_position = current_position + new_velocity
+
     for i in range(len(updated_position)):
         lower_bound, upper_bound = param_bounds[i]
         updated_position[i] = max(lower_bound, min(updated_position[i], upper_bound))
+
     return updated_position
 

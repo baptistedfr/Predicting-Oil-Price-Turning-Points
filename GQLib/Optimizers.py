@@ -55,7 +55,6 @@ class Optimizer(ABC):
         """
         pass
 
-
 class MPGA(Optimizer):
     """
     Multi-Population Genetic Algorithm (MPGA) for optimizing LPPL parameters.
@@ -314,9 +313,13 @@ class MPGA(Optimizer):
 
 class PSO(Optimizer):
     """
-    Particule Swarm Optimisation for optimizing LPPL parameters.
+    Particle Swarm Optimisation for optimizing LPPL parameters.
 
-    This optimizer evolves multiple swarm to minimize the Residual Sum of Squares (RSS).
+    Particle Swarm Optimization (PSO) is a nature-inspired optimization algorithm that mimics the social behavior of birds flocking or fish schooling. 
+    The algorithm involves a group of particles, each representing a set of parameters of the model, which collectively explore 
+    the search space to find the optimal solution (minimum RSS).  These particles move through the space by adjusting their positions and velocities based 
+    on two primary influences: the best solution they have individually found and the best solution discovered by the entire group. 
+    Over successive iterations, particles communicate and learn from each other, progressively converging towards the optimal region of the search space.
     """
 
     def __init__(self, frequency: str) -> None:
@@ -340,7 +343,7 @@ class PSO(Optimizer):
             params = json.load(f)
 
         self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
-        self.NUM_PARTICULES = params["NUM_PARTICULES"]
+        self.NUM_PARTICLES = params["NUM_PARTICLES"]
         self.MAX_GEN = params["MAX_GEN"]
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
@@ -366,28 +369,31 @@ class PSO(Optimizer):
         """
         param_bounds = self.convert_param_bounds(end)
 
-        # Initialize particules and calculate initial fitness values
-        particules = [
-            Particule(param_bounds, data)
-            for _ in range(self.NUM_PARTICULES)
+        # Initialize particles with initial fitness values
+        particles = [
+            Particle(param_bounds, data)
+            for _ in range(self.NUM_PARTICLES)
         ]
-        # Compute global best initial fitness values
-        best_particle : Particule = min(particules, key=lambda p: p.best_local_fitness)
-        global_best_fitness = best_particle.best_local_fitness
-        global_best_solution = best_particle.best_position
+
+        # Compute initial global best particle
+        best_particle : Particle = min(particles, key=lambda p: p.local_best_fitness)
+        global_best_fitness = best_particle.local_best_fitness
+        global_best_solution = best_particle.local_best_position
 
         current = 0
+        # Iterate through the generations
         while current <= self.MAX_GEN:
-            '''
-            Boucle principale iterrant les particules
-            '''
-            for m in range(self.NUM_PARTICULES):
-                particules[m].update_position_fitness(global_best_solution, data)
-                
-            best_particle : Particule = min(particules, key=lambda p: p.best_local_fitness)
-            if best_particle.best_local_fitness < global_best_fitness: #Update Global Best
-                global_best_fitness = best_particle.best_local_fitness
-                global_best_solution = best_particle.best_position
+
+            # Update each particle position in the swarm
+            for m in range(self.NUM_PARTICLES):
+                particles[m].update_position(global_best_solution, data)
+            
+            # Update the new global best particle
+            best_particle : Particle = min(particles, key=lambda p: p.local_best_fitness)
+            if best_particle.local_best_fitness < global_best_fitness:
+                global_best_fitness = best_particle.local_best_fitness
+                global_best_solution = best_particle.local_best_position
+
             current+=1
         
         return global_best_fitness, global_best_solution
@@ -414,11 +420,18 @@ class PSO(Optimizer):
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
     
-class Particule():
+class Particle():
+    """
+    In Particle Swarm Optimization, a particle represents a potential solution to the optimization problem being addressed
+    Each particle is characterized by its position in the search space, which corresponds to a set of parameters of the model
+    and its velocity vector, which determines the direction and magnitude of its movement. As the algorithm progresses, the particle 
+    adjusts its position by considering its own past experiences and the knowledge gained from other particles in the swarm.
+    """
 
-    def __init__(self, param_bounds, data):
+    def __init__(self, param_bounds: np.ndarray, data: np.ndarray, 
+                 w: float = 0.8, c1: float = 1.2, c2: float =1.2):
         """
-        Initialize a particule for PSO in nopython mode with Numba.
+        Initialize a particle for particle Swarm Optimisation
         
         Parameters
         ----------
@@ -430,41 +443,85 @@ class Particule():
                 param_bounds[2] = [phi_min, phi_max]
                 param_bounds[3] = [alpha_min, alpha_max]
 
+        data : np.ndarray
+            A 2D array of shape (J, 2), where:
+                - Column 0 is time.
+                - Column 1 is the observed price.
+
+        w : float
+            Weight in the velocity calculation corresponding to the inertia of the particle.
+            The larger the parameter, the more freedom the particle has to move.
+        
+        c1 : float
+            Weight in the velocity calculation corresponding to the memory of the local best position.
+            The larger the parameter, the closer the particle will want to get to its local minimum.
+
+        c2 : float
+            Weight in the velocity calculation corresponding to the memory of the global best position.
+            The larger the parameter, the closer the particle will want to get to the global best position of the swarm.
         """
+
         self.param_bounds = param_bounds
         num_params = self.param_bounds.shape[0]  # D
         self.position = np.empty(num_params, dtype=np.float64)
 
+        # Initialize the parameters according to their bounds
         for i, bounds in enumerate(self.param_bounds): 
             self.position[i] = np.random.uniform(bounds[0], bounds[1])
         
-        self.best_position = None
-        self.best_local_fitness = None
+        # Initialize particle (local) best position and best fitness associated
+        self.local_best_position : np.ndarray = self.position[0]
+        self.local_best_fitness : float = np.inf
+
+        # Compute the fitness of the newly created particle
         self.compute_fitness(data)
 
         self.velocity = np.zeros(num_params)
-        self.w = 0.8
-        self.c1 = 1.2
-        self.c2 = 1.2
+        self.w = w # Inertia weight
+        self.c1 = c1 # Cognitive coefficient
+        self.c2 = c2 # Social coefficient
     
-    def compute_fitness(self, data):
-        fit = LPPL.numba_RSS(self.position, data)
-        if self.best_position is not None:
-            if fit < self.best_local_fitness: # On actualise le minimum local
-                self.best_position = self.position
-                self.best_local_fitness = fit
-        else: # Cas d'initialisation
-            self.best_position = self.position
-            self.best_local_fitness = fit
+    def compute_fitness(self, data: np.ndarray):
+        """
+        Compute the fitness of the given particle with actual position (= set of parameters).
+        Update the best position that occured in the life of the particle.
 
-    def update_position_fitness(self, global_best, data):
-        self.velocity = njit_update_velocity(self.velocity, self.position, self.best_position, global_best, self.w, self.c1, self.c2)
+        Parameters
+        ----------
+        data : np.ndarray
+            A 2D array of shape (J, 2), where:
+                - Column 0 is time.
+                - Column 1 is the observed price.
+        """
+        # Call numba fonction of the LPPL model to compute fitness
+        fit = LPPL.numba_RSS(self.position, data)
+
+        # Update the particle best position and best fitness associated
+        if fit < self.local_best_fitness:
+            self.local_best_position = self.position
+            self.local_best_fitness = fit
+
+    def update_position(self, global_best_position: np.ndarray, data: np.ndarray):
+        """
+        Compute the velocity vector of the particle according to the best position in the swarm.
+        Update the position of the particle with the new velocity.
+
+        Parameters
+        ----------
+        global_best_position : np.ndarray
+            Set of parameters corresponding to the best particle in the swarm according to the fitness
+
+        data : np.ndarray
+            A 2D array of shape (J, 2), where:
+                - Column 0 is time.
+                - Column 1 is the observed price.
+        """
+        self.velocity = njit_update_velocity(self.velocity, self.position, self.local_best_position, 
+                                             global_best_position, self.w, self.c1, self.c2)
+        
         self.position = njit_update_position(self.position, self.velocity, self.param_bounds)
         
         self.compute_fitness(data)
-
-
-
 
 class SA(Optimizer):
     """
@@ -560,7 +617,9 @@ class SA(Optimizer):
         candidate_solution = np.empty_like(current_solution)
 
         current = 0
+        # Iterate through the generations
         while current <= self.MAX_ITER:
+
             # Generate a new candidate solution by sampling within parameter bounds
             for i in range(len(current_solution)):
                 low, high = param_bounds[i]
@@ -586,8 +645,10 @@ class SA(Optimizer):
             if current_fitness < best_fitness:
                 best_solution = current_solution
                 best_fitness = current_fitness
+
             current += 1
-            print(f"Iteration {current}: Best Fitness = {best_fitness}")
+            # print(f"Iteration {current}: Best Fitness = {best_fitness}")
+
             # Cooling schedule: Gradually reduce the temperature
             temperature *= self.COOLING_RATE
 
@@ -615,6 +676,3 @@ class SA(Optimizer):
             [self.PARAM_BOUNDS["alpha"][0], self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
     
-    
-        
-
