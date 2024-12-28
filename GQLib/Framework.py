@@ -88,8 +88,8 @@ class Framework:
             - Column 1: Prices (float).
         """
         # Convert start and end dates to datetime64
-        start_dt = np.datetime64(pd.to_datetime(self.time_start, format="%m/%d/%Y"))
-        end_dt = np.datetime64(pd.to_datetime(self.time_end, format="%m/%d/%Y"))
+        start_dt = np.datetime64(pd.to_datetime(self.time_start, format="%d/%m/%Y"))
+        end_dt = np.datetime64(pd.to_datetime(self.time_end, format="%d/%m/%Y"))
 
         # Filter rows within the specified date range
         mask = (self.data[:, 1] >= start_dt) & (self.data[:, 1] <= end_dt)
@@ -104,9 +104,9 @@ class Framework:
         Parameters
         ----------
         time_start : str
-            Start date of the main sample in "%m/%d/%Y" format.
+            Start date of the main sample in "%d/%m/%Y" format.
         time_end : str
-            End date of the main sample in "%m/%d/%Y" format.
+            End date of the main sample in "%d/%m/%Y" format.
         optimizer_class : Optimizer
             A class for optimizing LPPL parameters.
         """

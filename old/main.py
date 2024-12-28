@@ -1,4 +1,4 @@
-from genetic_algo import GeneticAlgorithm
+from old.genetic_algo import GeneticAlgorithm
 from datetime import datetime
 import pandas as pd
 

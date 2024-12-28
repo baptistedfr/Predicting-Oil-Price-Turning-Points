@@ -22,6 +22,8 @@ class Optimizer(ABC):
     Defines the interface for any optimizer used to fit LPPL parameters.
     """
 
+    PARAM_BOUNDS = None
+
     @abstractmethod
     def __init__(self, frequency: str) -> None:
         """
@@ -54,7 +56,28 @@ class Optimizer(ABC):
             The best fitness value (RSS) and the corresponding parameter set.
         """
         pass
+        
+    def convert_param_bounds(self, end: float) -> np.ndarray:
+        """
+        Convert parameter bounds to a NumPy array format.
 
+        Parameters
+        ----------
+        end : float
+            The end time of the subinterval.
+
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (4, 2) representing the bounds for each parameter.
+        """
+        return np.array([
+            [self.PARAM_BOUNDS["t_c"][0] + end, self.PARAM_BOUNDS["t_c"][1] + end],
+            [self.PARAM_BOUNDS["omega"][0], self.PARAM_BOUNDS["omega"][1]],
+            [self.PARAM_BOUNDS["phi"][0], self.PARAM_BOUNDS["phi"][1]],
+            [self.PARAM_BOUNDS["alpha"][0], self.PARAM_BOUNDS["alpha"][1]]
+        ], dtype=np.float64)
+    
 class MPGA(Optimizer):
     """
     Multi-Population Genetic Algorithm (MPGA) for optimizing LPPL parameters.
@@ -80,7 +103,7 @@ class MPGA(Optimizer):
         self.frequency = frequency
 
         # Load optimization parameters from a JSON configuration file
-        with open("params.json", "r") as f:
+        with open("params/params_mgpa.json", "r") as f:
             params = json.load(f)
 
         self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
@@ -290,26 +313,6 @@ class MPGA(Optimizer):
         """
         return njit_calculate_fitness(population, data)
 
-    def convert_param_bounds(self, end: float) -> np.ndarray:
-        """
-        Convert parameter bounds to a NumPy array format.
-
-        Parameters
-        ----------
-        end : float
-            The end time of the subinterval.
-
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (4, 2) representing the bounds for each parameter.
-        """
-        return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
-            [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
-            [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
-            [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
-        ], dtype=np.float64)
 
 class PSO(Optimizer):
     """
@@ -322,7 +325,7 @@ class PSO(Optimizer):
     Over successive iterations, particles communicate and learn from each other, progressively converging towards the optimal region of the search space.
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self, frequency: str, w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
         """
         Initialize the PSO optimizer.
 
@@ -330,6 +333,18 @@ class PSO(Optimizer):
         ----------
         frequency : str
             The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
+        
+        w : float
+            Weight in the velocity calculation corresponding to the inertia of the particle.
+            The larger the parameter, the more freedom the particle has to move.
+        
+        c1 : float
+            Weight in the velocity calculation corresponding to the memory of the local best position.
+            The larger the parameter, the closer the particle will want to get to its local minimum.
+
+        c2 : float
+            Weight in the velocity calculation corresponding to the memory of the global best position.
+            The larger the parameter, the closer the particle will want to get to the global best position of the swarm
 
         Raises
         ------
@@ -337,9 +352,11 @@ class PSO(Optimizer):
             If frequency is not one of the accepted values.
         """
         self.frequency = frequency
-
+        self.w = w # Inertia weight
+        self.c1 = c1 # Cognitive coefficient
+        self.c2 = c2 # Social coefficient
         # Load optimization parameters from a JSON configuration file
-        with open("params_pso.json", "r") as f:
+        with open("params/params_pso.json", "r") as f:
             params = json.load(f)
 
         self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
@@ -371,7 +388,7 @@ class PSO(Optimizer):
 
         # Initialize particles with initial fitness values
         particles = [
-            Particle(param_bounds, data)
+            Particle(param_bounds, data, w = self.w, c1 = self.c1, c2 =  self.c2)
             for _ in range(self.NUM_PARTICLES)
         ]
 
@@ -398,27 +415,6 @@ class PSO(Optimizer):
         
         return global_best_fitness, global_best_solution
 
-
-    def convert_param_bounds(self, end: float) -> np.ndarray:
-        """
-        Convert parameter bounds to a NumPy array format.
-
-        Parameters
-        ----------
-        end : float
-            The end time of the subinterval.
-
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (4, 2) representing the bounds for each parameter.
-        """
-        return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
-            [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
-            [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
-            [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
-        ], dtype=np.float64)
     
 class Particle():
     """
@@ -568,7 +564,7 @@ class SA(Optimizer):
         self.frequency = frequency
 
         # Load optimization parameters from a JSON configuration file
-        with open("params_sa.json", "r") as f:
+        with open("params/params_sa.json", "r") as f:
             params = json.load(f)
 
         self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
@@ -651,28 +647,7 @@ class SA(Optimizer):
 
             # Cooling schedule: Gradually reduce the temperature
             temperature *= self.COOLING_RATE
-
-
         return best_fitness, best_solution
 
-    def convert_param_bounds(self, end: float) -> np.ndarray:
-        """
-        Convert parameter bounds to a NumPy array format.
-
-        Parameters
-        ----------
-        end : float
-            The end time of the subinterval.
-
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (4, 2) representing the bounds for each parameter.
-        """
-        return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end, self.PARAM_BOUNDS["t_c"][1] + end],
-            [self.PARAM_BOUNDS["omega"][0], self.PARAM_BOUNDS["omega"][1]],
-            [self.PARAM_BOUNDS["phi"][0], self.PARAM_BOUNDS["phi"][1]],
-            [self.PARAM_BOUNDS["alpha"][0], self.PARAM_BOUNDS["alpha"][1]]
-        ], dtype=np.float64)
+    
     

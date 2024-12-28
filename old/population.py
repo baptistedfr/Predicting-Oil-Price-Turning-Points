@@ -2,7 +2,7 @@ import random
 from dataclasses import dataclass
 from operator import index
 
-from individual import Individual
+from old.individual import Individual
 import numpy as np
 import pandas as pd
 import math
