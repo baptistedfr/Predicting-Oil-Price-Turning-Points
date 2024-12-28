@@ -290,6 +290,10 @@ def njit_update_velocity(velocity, position, local_min, global_best, w, c1, c2):
     return new_velocity
 
 @njit
-def njit_update_position(position, velocity):
-    return position + velocity
+def njit_update_position(position, velocity, param_bounds):
+    updated_position = position + velocity
+    for i in range(len(updated_position)):
+        lower_bound, upper_bound = param_bounds[i]
+        updated_position[i] = max(lower_bound, min(updated_position[i], upper_bound))
+    return updated_position
 

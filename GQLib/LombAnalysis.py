@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
 from .LPPL import LPPL
+import json
 
 class LombAnalysis:
     """
@@ -208,7 +209,7 @@ class LombAnalysis:
             raise RuntimeError("No filtered results found. Call filter_results() first.")
 
         idx = np.argmax(self.filtered_power)
-        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.05
+        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.3
 
     def show_spectrum(self,
                       ax=None,
