@@ -1,4 +1,4 @@
-from .abstract_optimizer import Optimizer
+from .abstract_optimizers import Optimizer, GeneticAlgorithm
 from .MPGA import MPGA
 from .PSO import PSO
 from .SA import SA

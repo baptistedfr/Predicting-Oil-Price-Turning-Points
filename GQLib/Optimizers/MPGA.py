@@ -1,23 +1,12 @@
-from abc import ABC, abstractmethod
-from .abstract_optimizer import Optimizer
+from GQLib.njitFunc import njit_immigration_operation
+from .abstract_optimizers import GeneticAlgorithm
+from GQLib.LPPL import LPPL
 from typing import Tuple
 import numpy as np
-import random
-from GQLib.LPPL import LPPL
 import json
-from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population,
-    njit_update_position,
-    njit_update_velocity
 
-)
 
-class MPGA(Optimizer):
+class MPGA(GeneticAlgorithm):
     """
     Multi-Population Genetic Algorithm (MPGA) for optimizing LPPL parameters.
 
@@ -131,82 +120,6 @@ class MPGA(Optimizer):
 
         return bestObjV, bestChrom
 
-    
-
-    def initialize_population(self, param_bounds: np.ndarray, population_size: int) -> np.ndarray:
-        """
-        Initialize a population of chromosomes.
-
-        Parameters
-        ----------
-        param_bounds : np.ndarray
-            Bounds for each parameter, shape (4, 2).
-        population_size : int
-            Number of individuals in the population.
-
-        Returns
-        -------
-        np.ndarray
-            A randomly initialized population of chromosomes.
-        """
-        return njit_initialize_population(param_bounds, population_size)
-
-    def selection(self, population: np.ndarray, fitness: np.ndarray) -> np.ndarray:
-        """
-        Perform tournament selection.
-
-        Parameters
-        ----------
-        population : np.ndarray
-            Population array of shape (N, 4).
-        fitness : np.ndarray
-            Fitness array of shape (N,).
-
-        Returns
-        -------
-        np.ndarray
-            Selected individuals for the next generation.
-        """
-        return njit_selection(population, fitness)
-
-    def crossover(self, parents: np.ndarray, prob: float) -> np.ndarray:
-        """
-        Perform single-point crossover on the population.
-
-        Parameters
-        ----------
-        parents : np.ndarray
-            Parent population, shape (N, 4).
-        prob : float
-            Probability of crossover.
-
-        Returns
-        -------
-        np.ndarray
-            Offspring population.
-        """
-        return njit_crossover(parents, prob)
-
-    def mutate(self, offspring: np.ndarray, prob: float, param_bounds: np.ndarray) -> np.ndarray:
-        """
-        Apply mutation to the offspring.
-
-        Parameters
-        ----------
-        offspring : np.ndarray
-            Offspring population, shape (N, 4).
-        prob : float
-            Mutation probability.
-        param_bounds : np.ndarray
-            Bounds for each parameter.
-
-        Returns
-        -------
-        np.ndarray
-            Mutated population.
-        """
-        return njit_mutate(offspring, prob, param_bounds)
-
     def immigration_operation(self, populations: list[np.ndarray], fitness_values: list[np.ndarray]) -> list[np.ndarray]:
         """
         Perform the immigration operation between populations.
@@ -224,21 +137,3 @@ class MPGA(Optimizer):
             Updated populations after immigration.
         """
         return njit_immigration_operation(populations, fitness_values)
-
-    def calculate_fitness(self, population: np.ndarray, data: np.ndarray) -> np.ndarray:
-        """
-        Calculate the RSS fitness for each individual in the population.
-
-        Parameters
-        ----------
-        population : np.ndarray
-            Population array, shape (N, 4).
-        data : np.ndarray
-            Subinterval data, shape (J, 2).
-
-        Returns
-        -------
-        np.ndarray
-            RSS fitness values for the population.
-        """
-        return njit_calculate_fitness(population, data)

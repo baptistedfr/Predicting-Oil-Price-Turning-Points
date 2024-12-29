@@ -1,21 +1,10 @@
-from abc import ABC, abstractmethod
+from .abstract_optimizers import Optimizer
+from GQLib.LPPL import LPPL
 from typing import Tuple
 import numpy as np
 import random
-from GQLib.LPPL import LPPL
 import json
-from .abstract_optimizer import Optimizer
-from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population,
-    njit_update_position,
-    njit_update_velocity
 
-)
 
 class SA(Optimizer):
     """
@@ -132,6 +121,5 @@ class SA(Optimizer):
             current += 1
             # Cooling schedule: Gradually reduce the temperature
             temperature *= self.COOLING_RATE
-
 
         return best_fitness, best_solution

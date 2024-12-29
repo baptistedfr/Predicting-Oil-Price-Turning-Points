@@ -1,20 +1,11 @@
-from abc import ABC, abstractmethod
+from GQLib.LPPL import LPPL
 from typing import Tuple
 import numpy as np
-import random
-from GQLib.LPPL import LPPL
 import json
-from .abstract_optimizer import Optimizer
+from .abstract_optimizers import Optimizer
 from ..njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population,
     njit_update_position,
     njit_update_velocity
-
 )
 
 
@@ -52,6 +43,7 @@ class PSO(Optimizer):
         self.w = w # Inertia weight
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient
+
         # Load optimization parameters from a JSON configuration file
         with open("params/params_pso.json", "r") as f:
             params = json.load(f)
