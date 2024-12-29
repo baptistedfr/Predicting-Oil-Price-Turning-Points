@@ -24,21 +24,10 @@ class SGA(Optimizer):
     This optimizer evolves a single population through selection, crossover, mutation to minimize the Residual Sum of Squares (RSS).
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the SGA optimizer.
-
-        Parameters
-        ----------
-        frequency : str
-            The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
-
-        Raises
-        ------
-        ValueError
-            If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
 
         # Load optimization parameters from a JSON configuration file
         with open("params/params_sga.json", "r") as f:

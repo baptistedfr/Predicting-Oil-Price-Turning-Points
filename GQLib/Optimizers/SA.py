@@ -45,21 +45,10 @@ class SA(Optimizer):
         The rate at which the temperature decreases during the algorithm.
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the SA optimizer with the specified frequency and load configuration parameters.
-
-        Parameters
-        ----------
-        frequency : str
-            The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
-
-        Raises
-        ------
-        ValueError
-            If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
 
         # Load optimization parameters from a JSON configuration file
         with open("params/params_sa.json", "r") as f:

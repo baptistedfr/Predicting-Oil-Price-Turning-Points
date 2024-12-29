@@ -29,14 +29,12 @@ class PSO(Optimizer):
     Over successive iterations, particles communicate and learn from each other, progressively converging towards the optimal region of the search space.
     """
 
-    def __init__(self, frequency: str, w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
+    def __init__(self,  w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
         """
         Initialize the PSO optimizer.
 
         Parameters
         ----------
-        frequency : str
-            The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
         
         w : float
             Weight in the velocity calculation corresponding to the inertia of the particle.
@@ -50,12 +48,7 @@ class PSO(Optimizer):
             Weight in the velocity calculation corresponding to the memory of the global best position.
             The larger the parameter, the closer the particle will want to get to the global best position of the swarm
 
-        Raises
-        ------
-        ValueError
-            If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
         self.w = w # Inertia weight
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient

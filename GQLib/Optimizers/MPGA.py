@@ -25,22 +25,11 @@ class MPGA(Optimizer):
     and immigration operations to minimize the Residual Sum of Squares (RSS).
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the MPGA optimizer.
 
-        Parameters
-        ----------
-        frequency : str
-            The frequency of the time series, must be one of {"daily", "weekly", "monthly"}.
-
-        Raises
-        ------
-        ValueError
-            If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
-
         # Load optimization parameters from a JSON configuration file
         with open("params/params_mpga.json", "r") as f:
             params = json.load(f)

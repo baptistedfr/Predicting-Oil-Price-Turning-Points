@@ -3,10 +3,10 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+from .Optimizers import Optimizer
+from .LombAnalysis import LombAnalysis
+from .LPPL import LPPL
 
-from GQLib.Optimizers import Optimizer
-from GQLib.LombAnalysis import LombAnalysis
-from GQLib.LPPL import LPPL
 
 class Framework:
     """
@@ -76,7 +76,7 @@ class Framework:
 
         return data
 
-    def select_sample(self) -> np.ndarray:
+    def select_sample(self, time_start: str, time_end: str) -> np.ndarray:
         """
         Select a sample from the global time series based on a user-defined date range.
 
@@ -88,8 +88,8 @@ class Framework:
             - Column 1: Prices (float).
         """
         # Convert start and end dates to datetime64
-        start_dt = np.datetime64(pd.to_datetime(self.time_start, format="%d/%m/%Y"))
-        end_dt = np.datetime64(pd.to_datetime(self.time_end, format="%d/%m/%Y"))
+        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
+        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
 
         # Filter rows within the specified date range
         mask = (self.data[:, 1] >= start_dt) & (self.data[:, 1] <= end_dt)
@@ -97,7 +97,7 @@ class Framework:
 
         return sample[:, [0, 2]].astype(float)
 
-    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
+    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> dict:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
 
@@ -110,29 +110,28 @@ class Framework:
         optimizer_class : Optimizer
             A class for optimizing LPPL parameters.
         """
-        self.time_start = time_start
-        self.time_end = time_end
-        self.sample = self.select_sample()
+        sample = self.select_sample(time_start, time_end)
 
         # Generate subintervals
-        self.generate_subintervals()
+        subintervals = self.generate_subintervals(self.frequency, sample)
 
         # Store optimization results
-        self.results = []
+        results = []
 
         # Optimize parameters for each subinterval
-        for (sub_start, sub_end, sub_data) in tqdm(self.subintervals, desc="Processing subintervals", unit="subinterval"):
+        for (sub_start, sub_end, sub_data) in tqdm(subintervals, desc="Processing subintervals", unit="subinterval"):
             # optimizer = optimizer_class(self.frequency)
             bestObjV, bestParams = optimizer.fit(sub_start, sub_end, sub_data)
-            self.results.append({
+            results.append({
                 "sub_start": sub_start,
                 "sub_end": sub_end,
                 "bestObjV": bestObjV,
                 "bestParams": bestParams.tolist()
             })
-        return self.results
+        return results
 
     def analyze(self,
+                results : dict = None,
                 result_json_name: dict = None,
                 use_package: bool = False,
                 remove_mpf: bool = True,
@@ -157,23 +156,23 @@ class Framework:
         dict
             An updated list of results with significance flags.
         """
-        if result_json_name is None and self.results is None:
+        if result_json_name is None and results is None:
             raise ValueError("Results must be provided.")
 
         if result_json_name is not None:
             with open(result_json_name, "r") as f:
-                self.results = json.load(f)
+                results = json.load(f)
 
-        self.best_results = []
+        best_results = []
 
         # Visualizations if requested
         if show:
-            num_intervals = len(self.results)
+            num_intervals = len(results)
             num_cols = 3
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
-        for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
+        for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
             tc, omega, phi, alpha = res["bestParams"]
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
@@ -201,7 +200,7 @@ class Framework:
 
 
 
-            self.best_results.append({
+            best_results.append({
                 "sub_start": res["sub_start"],
                 "sub_end": res["sub_end"],
                 "bestObjV": res["bestObjV"],
@@ -212,20 +211,10 @@ class Framework:
         if show:
             plt.tight_layout()
             plt.show()
+        
+        return best_results
 
-    def save_results(self, results: dict, file_name: str) -> None:
-        """
-        Save results to a JSON file.
-
-        Parameters
-        ----------
-        results : dict
-            Results to be saved.
-        file_name : str
-            Path to the output JSON file.
-        """
-        with open(file_name, "w") as f:
-            json.dump(results, f, indent=4)
+    
 
     def show_lppl(self, lppl: LPPL, ax=None, show: bool = False) -> None:
         """
@@ -262,7 +251,7 @@ class Framework:
         if show:
             plt.show()
 
-    def visualize(self) -> None:
+    def visualize(self, best_results : dict) -> None:
         """
         Visualize significant critical times on the price series.
         """
@@ -270,7 +259,7 @@ class Framework:
         min_time = np.inf
         max_time = -np.inf
 
-        for res in self.best_results:
+        for res in best_results:
             if res["sub_start"] < min_time:
                 min_time = res["sub_start"]
             if res["sub_end"] > max_time:
@@ -291,28 +280,46 @@ class Framework:
         plt.legend()
         plt.show()
 
-    def generate_subintervals(self) -> None:
+    
+    @staticmethod
+    def generate_subintervals(frequency, sample : np.asarray) -> None:
         """
         Generate subintervals based on the frequency and pseudo-code logic.
         """
-        time_start = self.sample[0, 0]
-        time_end = self.sample[-1, 0]
+        time_start = sample[0, 0]
+        time_end = sample[-1, 0]
 
-        if self.frequency == "daily":
+        if frequency == "daily":
             freq_list = [15, 30, 5]
-        elif self.frequency == "weekly":
+        elif frequency == "weekly":
             freq_list = [3.0, 6.0, 1.0]
-        elif self.frequency == "monthly":
+        elif frequency == "monthly":
             freq_list = [0.75, 1.5, 0.25]
 
         three_weeks, six_weeks, one_week = freq_list
         total_days = (time_end - time_start)
         delta = max((total_days * 0.75) / three_weeks, three_weeks)
 
-        self.subintervals = []
+        subintervals = []
         for sub_end in np.arange(time_end, time_end - six_weeks, -one_week):
             for sub_st in np.arange(time_start, time_end - total_days / 4, delta):
-                mask = (self.sample[:, 0] >= sub_st) & (self.sample[:, 0] <= sub_end)
-                sub_sample = self.sample[mask]
+                mask = (sample[:, 0] >= sub_st) & (sample[:, 0] <= sub_end)
+                sub_sample = sample[mask]
                 if len(sub_sample) > 0:
-                    self.subintervals.append((sub_st, sub_end, sub_sample))
+                    subintervals.append((sub_st, sub_end, sub_sample))
+        return subintervals
+    
+    @staticmethod
+    def save_results(results: dict, file_name: str) -> None:
+        """
+        Save results to a JSON file.
+
+        Parameters
+        ----------
+        results : dict
+            Results to be saved.
+        file_name : str
+            Path to the output JSON file.
+        """
+        with open(file_name, "w") as f:
+            json.dump(results, f, indent=4)
