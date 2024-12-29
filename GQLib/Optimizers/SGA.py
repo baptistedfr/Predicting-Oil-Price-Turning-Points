@@ -11,10 +11,7 @@ from GQLib.njitFunc import (
     njit_crossover,
     njit_immigration_operation,
     njit_mutate,
-    njit_initialize_population,
-    njit_update_position,
-    njit_update_velocity
-
+    njit_initialize_population
 )
 
 class SGA(Optimizer):
@@ -39,12 +36,13 @@ class SGA(Optimizer):
             If frequency is not one of the accepted values.
         """
         self.frequency = frequency
+        self.__name__ = self.__class__.__name__.replace("ABC", "")
 
         # Load optimization parameters from a JSON configuration file
         with open("params/params_sga.json", "r") as f:
             params = json.load(f)
 
-        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
+        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
         self.POPULATION_SIZE = params["POPULATION_SIZE"]
         self.MAX_GEN = params["MAX_GEN"]
         self.STOP_GEN = params["STOP_GEN"]

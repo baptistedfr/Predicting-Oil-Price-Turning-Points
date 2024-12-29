@@ -5,17 +5,6 @@ import random
 from GQLib.LPPL import LPPL
 import json
 from .abstract_optimizer import Optimizer
-from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population,
-    njit_update_position,
-    njit_update_velocity
-
-)
 
 class SA(Optimizer):
     """
@@ -60,12 +49,13 @@ class SA(Optimizer):
             If frequency is not one of the accepted values.
         """
         self.frequency = frequency
+        self.__name__ = self.__class__.__name__.replace("ABC", "")
 
         # Load optimization parameters from a JSON configuration file
         with open("params/params_sa.json", "r") as f:
             params = json.load(f)
 
-        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
+        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
         self.MAX_ITER = params["MAX_ITER"]
         self.INITIAL_TEMP = params["INITIAL_TEMP"]
         self.COOLING_RATE = params["COOLING_RATE"]
