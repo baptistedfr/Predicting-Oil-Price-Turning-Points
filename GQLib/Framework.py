@@ -240,7 +240,16 @@ class Framework:
         show : bool, optional
             Whether to display the plot immediately. Default is False.
         """
-        extended_t = np.arange(lppl.t[0], round(lppl.tc) + 1000)
+
+        length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
+
+        # Calculer la longueur maximale disponible
+        max_length = len(self.global_prices)
+
+        # Ajuster length_extended pour qu'il ne dépasse pas la longueur disponible
+        length_extended = min(length_extended, max_length)
+
+        extended_t = np.arange(lppl.t[0], length_extended)
         extended_y = self.global_prices[int(extended_t[0]):int(extended_t[-1] + 1)]
         extended_dates = self.global_dates[int(extended_t[0]):int(extended_t[-1] + 1)]
         end_date = self.global_dates[int(lppl.t[-1])]
@@ -284,7 +293,8 @@ class Framework:
         plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
         for tc in significant_tc:
-            plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
+            if tc < (len(self.global_dates) - 1):
+                plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
 
         plt.xlabel("Date")
         plt.ylabel("Price")

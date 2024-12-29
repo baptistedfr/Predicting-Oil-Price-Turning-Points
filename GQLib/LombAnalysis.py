@@ -68,14 +68,6 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        test = self.lppl.compute_residuals(False)
-
-        # test to list into a json
-        test_list = test.tolist()
-
-        with open('residuals.json', 'w') as f:
-            json.dump(test_list, f)
-
         ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
         ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
         ax.set_xlabel("Time (ln(tc - t))")
