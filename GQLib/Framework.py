@@ -97,7 +97,7 @@ class Framework:
 
         return sample[:, [0, 2]].astype(float)
 
-    def process(self, time_start: str, time_end: str, optimizer_class: Optimizer) -> None:
+    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
 
@@ -122,7 +122,7 @@ class Framework:
 
         # Optimize parameters for each subinterval
         for (sub_start, sub_end, sub_data) in tqdm(self.subintervals, desc="Processing subintervals", unit="subinterval"):
-            optimizer = optimizer_class(self.frequency)
+            # optimizer = optimizer_class(self.frequency)
             bestObjV, bestParams = optimizer.fit(sub_start, sub_end, sub_data)
             self.results.append({
                 "sub_start": sub_start,
@@ -130,6 +130,7 @@ class Framework:
                 "bestObjV": bestObjV,
                 "bestParams": bestParams.tolist()
             })
+        return self.results
 
     def analyze(self,
                 result_json_name: dict = None,
