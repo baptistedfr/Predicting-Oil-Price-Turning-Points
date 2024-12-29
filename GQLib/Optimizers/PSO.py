@@ -40,6 +40,7 @@ class PSO(Optimizer):
             The larger the parameter, the closer the particle will want to get to the global best position of the swarm
 
         """
+
         self.w = w # Inertia weight
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient
@@ -74,17 +75,19 @@ class PSO(Optimizer):
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
         param_bounds = self.convert_param_bounds(end)
-
+        self.fitness_history = []
+        
         # Initialize particles with initial fitness values
         particles = [
             Particle(param_bounds, data, w = self.w, c1 = self.c1, c2 =  self.c2)
             for _ in range(self.NUM_PARTICLES)
         ]
-
+        
         # Compute initial global best particle
         best_particle : Particle = min(particles, key=lambda p: p.local_best_fitness)
         global_best_fitness = best_particle.local_best_fitness
         global_best_solution = best_particle.local_best_position
+        self.fitness_history.append(global_best_fitness) 
 
         current = 0
         # Iterate through the generations
@@ -96,10 +99,11 @@ class PSO(Optimizer):
             
             # Update the new global best particle
             best_particle : Particle = min(particles, key=lambda p: p.local_best_fitness)
+            self.fitness_history.append(best_particle.local_best_fitness) 
             if best_particle.local_best_fitness < global_best_fitness:
                 global_best_fitness = best_particle.local_best_fitness
                 global_best_solution = best_particle.local_best_position
-
+                
             current+=1
         
         return global_best_fitness, global_best_solution
@@ -178,12 +182,12 @@ class Particle():
                 - Column 1 is the observed price.
         """
         # Call numba fonction of the LPPL model to compute fitness
-        fit = LPPL.numba_RSS(self.position, data)
+        self.fitness = LPPL.numba_RSS(self.position, data)
 
         # Update the particle best position and best fitness associated
-        if fit < self.local_best_fitness:
+        if self.fitness < self.local_best_fitness:
             self.local_best_position = self.position
-            self.local_best_fitness = fit
+            self.local_best_fitness = self.fitness
             
     def update_position(self, global_best_position: np.ndarray, data: np.ndarray):
         """

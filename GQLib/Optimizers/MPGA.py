@@ -51,6 +51,7 @@ class MPGA(GeneticAlgorithm):
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
         param_bounds = self.convert_param_bounds(end)
+        self.fitness_history = [[] for _ in range(self.NUM_POPULATIONS)]
 
         # Generate random probabilities for crossover and mutation
         crossover_prob = np.random.uniform(0.001, 0.05, size=self.NUM_POPULATIONS)
@@ -71,9 +72,11 @@ class MPGA(GeneticAlgorithm):
             fit = self.calculate_fitness(populations[m], data)
             fitness_values.append(fit)
             local_min = np.min(fit)
+
             if local_min < bestObjV:
                 bestObjV = local_min
                 bestChrom = populations[m][np.argmin(fit)]
+        self.fitness_history[m].append(bestObjV)
 
         # Initialize loop counters
         gen = 1
@@ -102,11 +105,14 @@ class MPGA(GeneticAlgorithm):
             # Check for global best solution
             newbestObjV = np.inf
             newbestChrom = None
+
             for m in range(self.NUM_POPULATIONS):
                 local_min = np.min(fitness_values[m])
+
                 if local_min < newbestObjV:
                     newbestObjV = local_min
                     newbestChrom = populations[m][np.argmin(fitness_values[m])]
+            self.fitness_history[m].append(newbestObjV)
 
             # Update counters based on improvement
             if newbestObjV < bestObjV:

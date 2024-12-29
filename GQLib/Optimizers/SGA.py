@@ -47,6 +47,7 @@ class SGA(GeneticAlgorithm):
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
         param_bounds = self.convert_param_bounds(end)
+        self.fitness_history = []
 
         # Generate random probabilities for crossover and mutation
         crossover_prob = np.random.uniform(0.001, 0.05)
@@ -57,8 +58,11 @@ class SGA(GeneticAlgorithm):
 
         # Compute initial fitness values
         fitness = self.calculate_fitness(population, data)
+
+        # Determine initial best individual
         bestObjV = np.min(fitness)
         bestChrom = population[np.argmin(fitness)]
+        self.fitness_history.append(bestObjV)
 
         # Initialize loop counters
         gen = 1
@@ -77,8 +81,11 @@ class SGA(GeneticAlgorithm):
 
             # Recompute fitness values
             fitness = self.calculate_fitness(population, data)
+            
+            # Determine best individual
             newbestObjV = np.min(fitness)
             newbestChrom = population[np.argmin(fitness)]
+            self.fitness_history.append(newbestObjV)
 
             # Update best solution
             if newbestObjV < bestObjV:
@@ -87,7 +94,7 @@ class SGA(GeneticAlgorithm):
                 gen0 = 0
             else:
                 gen0 += 1
-
+            
             gen += 1
 
         return bestObjV, bestChrom

@@ -77,12 +77,14 @@ class SA(Optimizer):
               (t_c, alpha, omega, phi).
         """
         param_bounds = self.convert_param_bounds(end)
-
+        self.fitness_history = []
+        
         # Initialize the current solution randomly within parameter bounds
         current_solution = [np.random.uniform(low, high) for (low, high) in param_bounds]
         best_solution = current_solution[:]
         current_fitness = LPPL.numba_RSS(current_solution, data)
         best_fitness = current_fitness
+        self.fitness_history.append(current_fitness)
 
         # Temperature initialization
         temperature = self.INITIAL_TEMP
@@ -110,7 +112,7 @@ class SA(Optimizer):
             if accept:
                 current_solution = candidate_solution
                 current_fitness = candidate_fitness
-
+                self.fitness_history.append(current_fitness)
 
             # Track the best solution found so far
             if current_fitness < best_fitness:

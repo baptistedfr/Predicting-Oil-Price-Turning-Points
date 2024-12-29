@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+import plotly.graph_objects as go
+from datetime import datetime
 from typing import Tuple
 import numpy as np
 from GQLib.njitFunc import (
@@ -49,7 +51,43 @@ class Optimizer(ABC):
         Tuple[float, np.ndarray]
             The best fitness value (RSS) and the corresponding parameter set.
         """
+        self.fitness_history = []
         pass
+    
+    def visualize_convergence(self):
+        """
+        Plot the fitness history stored in Optimizer instance to show the convergence of the algorithm.
+        """
+        if len(self.fitness_history) == 0:
+            raise Exception("Fitness history is empty !")
+
+        # If the algorithm has a single population
+        if all(isinstance(f, float) for f in self.fitness_history):
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=list(range(len(self.fitness_history))),
+                y=self.fitness_history,
+                mode='lines',
+                name='RSS'))   
+        # If the algorithm has multiple populations
+        elif all(isinstance(f, list) for f in self.fitness_history):
+            fig = go.Figure()
+            for series in enumerate(self.fitness_history):
+                if not len(series):
+                    fig.add_trace(go.Scatter(
+                        x=list(range(len(series))),
+                        y=series,
+                        mode='lines',
+                        name='RSS'))
+        else:
+            raise Exception("Invalid fitness history type !")
+
+        fig.update_layout(
+        title=f"Convergence of the algorithm {self.__class__.__name__}",
+        xaxis_title="Iteration",
+        yaxis_title="RSS")
+
+        fig.show()
 
     def convert_param_bounds(self, end: float) -> np.ndarray:
         """
