@@ -302,11 +302,13 @@ class Framework:
         # for tc in significant_tc:
         #     plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
         for tc in significant_tc:
-            if round(tc)<len(filtered_dates):
-                date_tc = filtered_dates[int(round(tc))]
+            try:
+                date_tc = self.global_dates[int(round(tc))]
                 if start_date <= date_tc <= end_date:
                     plt.axvline(x=date_tc, color="red", linestyle=":")
-
+            except:
+                continue
+            
         plt.title(name)
         plt.xlabel("Date")
         plt.ylabel("Price")

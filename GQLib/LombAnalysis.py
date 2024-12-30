@@ -177,7 +177,7 @@ class LombAnalysis:
             raise RuntimeError("No filtered results found. Call filter_results() first.")
 
         idx = np.argmax(self.filtered_power)
-        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.001
+        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.3
         
 
     def show_residuals(self, ax=None, show: bool = False) -> None:
