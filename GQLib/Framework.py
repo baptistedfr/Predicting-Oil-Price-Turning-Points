@@ -2,8 +2,9 @@ import numpy as np
 import pandas as pd
 import json
 import matplotlib.pyplot as plt
+from datetime import datetime
 from tqdm import tqdm
-from .Optimizers import Optimizer
+from .Optimizers import Optimizer, MPGA, PSO, SA, SGA
 from .LombAnalysis import LombAnalysis
 from .LPPL import LPPL
 
@@ -76,27 +77,6 @@ class Framework:
 
         return data
 
-    def select_sample(self, time_start: str, time_end: str) -> np.ndarray:
-        """
-        Select a sample from the global time series based on a user-defined date range.
-
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (M, 2), where:
-            - Column 0: Numeric time indices (float).
-            - Column 1: Prices (float).
-        """
-        # Convert start and end dates to datetime64
-        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
-        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
-
-        # Filter rows within the specified date range
-        mask = (self.data[:, 1] >= start_dt) & (self.data[:, 1] <= end_dt)
-        sample = self.data[mask]
-
-        return sample[:, [0, 2]].astype(float)
-
     def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> dict:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
@@ -107,11 +87,18 @@ class Framework:
             Start date of the main sample in "%d/%m/%Y" format.
         time_end : str
             End date of the main sample in "%d/%m/%Y" format.
-        optimizer_class : Optimizer
-            A class for optimizing LPPL parameters.
+        optimizer : Optimizer
+            Optimizer instance for parameter fitting
+        Returns
+        -------
+        dict
+            Optimization results for each subinterval.
         """
-        sample = self.select_sample(time_start, time_end)
-
+        optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
+        # PARAM_BOUNDS = self.load_params(self.frequency, optimizer.__class__.__name__)
+        # optimizer.PARAM_BOUNDS = PARAM_BOUNDS # Set parameter bounds for optimizer
+        # Select data sample
+        sample = self.select_sample(self.data, time_start, time_end) 
         # Generate subintervals
         subintervals = self.generate_subintervals(self.frequency, sample)
 
@@ -142,6 +129,8 @@ class Framework:
 
         Parameters
         ----------
+        results : dict
+            Optimization results to analyze.
         result_json_name : dict, optional
             Path to a JSON file containing results. If None, uses `self.results`.
         remove_mpf : bool, optional
@@ -251,7 +240,7 @@ class Framework:
         if show:
             plt.show()
 
-    def visualize(self, best_results : dict) -> None:
+    def visualize(self, best_results : dict, name = "") -> None:
         """
         Visualize significant critical times on the price series.
         """
@@ -274,17 +263,84 @@ class Framework:
 
         for tc in significant_tc:
             plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
-
+        plt.title(name)
         plt.xlabel("Date")
         plt.ylabel("Price")
         plt.legend()
         plt.show()
 
+    def generate_all_dates(self, optimizers : list =  [PSO(), MPGA(), SA(), SGA()]):
+        dates_sets = {
+            "Set 1": ("01/04/2003", "02/01/2008"),
+            "Set 2": ("01/02/2007", "01/02/2011"),
+            "Set 3": ("29/04/2011", "01/08/2015"),
+        }
+        print(f"FREQUENCY : {self.frequency}")
+        for optimizer in optimizers:
+            print(f"Running process for {optimizer.__class__.__name__}\n")
+            for set_name, (start_date, end_date) in dates_sets.items():
+                print(f"Running process for {set_name} from {start_date} to {end_date}")
+                # Exécute le processus d'optimisation pour l'intervalle de dates donné
+                results = self.process(start_date, end_date, optimizer)
+                # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
+                start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
+                end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
+                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+                # Sauvegarde des résultats au format JSON dans le fichier généré
+                self.save_results(results, filename)
+                # Verification de la significativité des résultats
+                best_results = self.analyze(results)
+                # Visualisation des résultats finaux
+                self.visualize(best_results, optimizer.__class__.__name__)
+
+    @staticmethod
+    def select_sample(data : np.asarray, time_start: str, time_end: str) -> np.ndarray:
+        """
+        Select a sample from the global time series based on a user-defined date range.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            The global dataset as a NumPy array with columns: time index, date, and price.
+        time_start : str
+            The start date for the selection in the format "%d/%m/%Y".
+        time_end : str
+            The end date for the selection in the format "%d/%m/%Y".
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (M, 2), where:
+            - Column 0: Numeric time indices (float).
+            - Column 1: Prices (float).
+        """
+        # Convert start and end dates to datetime64
+        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
+        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
+
+        # Filter rows within the specified date range
+        mask = (data[:, 1] >= start_dt) & (data[:, 1] <= end_dt)
+        sample = data[mask]
+
+        return sample[:, [0, 2]].astype(float)
     
     @staticmethod
-    def generate_subintervals(frequency, sample : np.asarray) -> None:
+    def generate_subintervals(frequency :str, sample : np.asarray) -> list:
         """
         Generate subintervals based on the frequency and pseudo-code logic.
+        Parameters
+        ----------
+        frequency : str
+            The frequency of analysis, e.g., 'daily', 'weekly', or 'monthly'.
+        sample : np.ndarray
+            The dataset for a specific sample with columns: time index and price.
+
+        Returns
+        -------
+        list
+            A list of tuples representing subintervals. Each tuple contains:
+            - Start time of the subinterval (float).
+            - End time of the subinterval (float).
+            - Sub-sample data (np.ndarray) within the interval.
         """
         time_start = sample[0, 0]
         time_end = sample[-1, 0]

@@ -3,6 +3,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 from typing import Tuple
 import numpy as np
+import json
 from GQLib.njitFunc import (
     njit_calculate_fitness,
     njit_selection,
@@ -10,6 +11,7 @@ from GQLib.njitFunc import (
     njit_mutate,
     njit_initialize_population,
 )
+
 
 class Optimizer(ABC):
     """
@@ -21,7 +23,7 @@ class Optimizer(ABC):
     PARAM_BOUNDS = None
 
     @abstractmethod
-    def __init__(self, frequency: str) -> None:
+    def __init__(self) -> None:
         """
         Initialize the optimizer with a specific frequency.
 
@@ -88,6 +90,35 @@ class Optimizer(ABC):
         yaxis_title="RSS")
 
         fig.show()
+
+    
+    def configure_params_from_frequency(self, frequency: str, optimizer_name : str):
+        """
+        Configure the optimizer's parameters based on the given frequency
+
+        Parameters
+        ----------
+        frequency : str
+            The frequency of the analysis, e.g., 'daily', 'weekly', or 'monthly'.
+        optimizer_name : str
+            The name of the optimizer being used to fetch specific parameter bounds.
+
+        """
+        try:
+            with open(f"params/params_{optimizer_name.lower()}.json", "r") as f:
+                params = json.load(f)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Configuration file for {optimizer_name} not found.")
+
+        # Charger les paramètres liés à la fréquence
+        freq_key = f"{frequency.upper()}_PARAM_BOUNDS"
+        if freq_key in params:
+            self.PARAM_BOUNDS = params[freq_key]
+
+        # Créer dynamiquement des attributs pour les autres paramètres globaux
+        for key, value in params.items():
+            if key != freq_key:
+                setattr(self, key, value)
 
     def convert_param_bounds(self, end: float) -> np.ndarray:
         """

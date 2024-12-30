@@ -39,14 +39,9 @@ class SA(Optimizer):
         Initialize the SA optimizer with the specified frequency and load configuration parameters.
         """
 
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_sa.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
-        self.MAX_ITER = params["MAX_ITER"]
-        self.INITIAL_TEMP = params["INITIAL_TEMP"]
-        self.COOLING_RATE = params["COOLING_RATE"]
+        self.MAX_ITER = None
+        self.INITIAL_TEMP = None
+        self.COOLING_RATE = None
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """

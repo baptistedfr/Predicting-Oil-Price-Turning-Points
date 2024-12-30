@@ -17,13 +17,10 @@ class SGA(GeneticAlgorithm):
         """
 
         # Load optimization parameters from a JSON configuration file
-        with open("params/params_sga.json", "r") as f:
-            params = json.load(f)
 
-        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
-        self.POPULATION_SIZE = params["POPULATION_SIZE"]
-        self.MAX_GEN = params["MAX_GEN"]
-        self.STOP_GEN = params["STOP_GEN"]
+        self.POPULATION_SIZE = None
+        self.MAX_GEN = None
+        self.STOP_GEN = None
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """

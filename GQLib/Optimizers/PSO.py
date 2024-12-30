@@ -45,13 +45,8 @@ class PSO(Optimizer):
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient
 
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_pso.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params["PARAM_BOUNDS"]
-        self.NUM_PARTICLES = params["NUM_PARTICLES"]
-        self.MAX_GEN = params["MAX_GEN"]
+        self.NUM_PARTICLES = None
+        self.MAX_GEN = None
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """
