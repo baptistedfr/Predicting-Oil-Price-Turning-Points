@@ -20,7 +20,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily") -> None:
+    def __init__(self, frequency: str = "daily", is_uso : bool = False) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -40,13 +40,13 @@ class Framework:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
 
-        self.data = self.load_data()
+        self.data = self.load_data(is_uso)
 
         self.global_times = self.data[:, 0].astype(float)
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
-    def load_data(self) -> np.ndarray:
+    def load_data(self, is_uso) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
 
@@ -64,11 +64,18 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
-        data.columns = ["Date", "Price"]
+        if is_uso == False:
+            data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
+            data.columns = ["Date", "Price"]
+            data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+        else:
+            data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
+            data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
+            data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y").values.astype("datetime64[D]")
+
 
         # Date conversion and sorting
-        data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+        
         data = data.sort_values(by="Date")
 
         # Add numeric time index
@@ -240,13 +247,40 @@ class Framework:
         if show:
             plt.show()
 
-    def visualize(self, best_results : dict, name = "") -> None:
+    def visualize(self, best_results : dict, name = "", start_date: str = None, end_date: str = None) -> None:
         """
         Visualize significant critical times on the price series.
+        Permet de filtrer et d'afficher les résultats pour une plage de dates spécifique.
+        
+        Args:
+            best_results (dict): Résultats optimaux contenant les informations des turning points.
+            name (str): Nom du graphique.
+            start_date (str): Date de début (format: 'YYYY-MM-DD'). Si None, utilise le début des données.
+            end_date (str): Date de fin (format: 'YYYY-MM-DD'). Si None, utilise la fin des données.
         """
         significant_tc = []
         min_time = np.inf
         max_time = -np.inf
+
+        if start_date is not None:
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+        else:
+            start_date = self.global_dates.min()
+        
+        if end_date is not None:
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+        else:
+            end_date = self.global_dates.max()
+
+        filtered_indices = [
+            i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date
+        ]
+        if not filtered_indices:
+            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
+            return
+        
+        filtered_dates = [self.global_dates[i] for i in filtered_indices]
+        filtered_prices = [self.global_prices[i] for i in filtered_indices]
 
         for res in best_results:
             if res["sub_start"] < min_time:
@@ -257,12 +291,22 @@ class Framework:
                 significant_tc.append(res["bestParams"][0])
 
         plt.figure(figsize=(12, 6))
-        plt.plot(self.global_dates, self.global_prices, label="Data", color="black")
-        plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
-        plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
+        plt.plot(filtered_dates, filtered_prices, label="Data", color="black")
+        if start_date <= self.global_dates[int(min_time)] <= end_date:
+            plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
+        if start_date <= self.global_dates[int(max_time)] <= end_date:
+            plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
+        # plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
+        # plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
+        # for tc in significant_tc:
+        #     plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
         for tc in significant_tc:
-            plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
+            if round(tc)<len(filtered_dates):
+                date_tc = filtered_dates[int(round(tc))]
+                if start_date <= date_tc <= end_date:
+                    plt.axvline(x=date_tc, color="red", linestyle=":")
+
         plt.title(name)
         plt.xlabel("Date")
         plt.ylabel("Price")

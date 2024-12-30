@@ -53,38 +53,6 @@ class LombAnalysis:
         dt = np.abs(self.lppl.tc - self.lppl.t)
         return np.log(dt)
 
-
-    def show_residuals(self, ax=None, show: bool = False) -> None:
-        """
-        Visualize the residuals of the LPPL model.
-
-        Parameters
-        ----------
-        ax : matplotlib.axes.Axes, optional
-            Matplotlib axis object to use for the plot (default: None).
-        show : bool
-            Whether to display the plot (default: False).
-        """
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(10, 6))
-
-        test = self.lppl.compute_residuals(False)
-
-        # test to list into a json
-        test_list = test.tolist()
-
-        with open('residuals.json', 'w') as f:
-            json.dump(test_list, f)
-
-        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
-        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
-        ax.set_xlabel("Time (ln(tc - t))")
-        ax.set_ylabel("Residuals")
-        ax.set_title("LPPL Residuals")
-        ax.legend()
-
-        if show:
-            plt.show()
     
     def compute_lomb_periodogram(self, use_package: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """
@@ -209,7 +177,40 @@ class LombAnalysis:
             raise RuntimeError("No filtered results found. Call filter_results() first.")
 
         idx = np.argmax(self.filtered_power)
-        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.3
+        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.001
+        
+
+    def show_residuals(self, ax=None, show: bool = False) -> None:
+        """
+        Visualize the residuals of the LPPL model.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis object to use for the plot (default: None).
+        show : bool
+            Whether to display the plot (default: False).
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+        test = self.lppl.compute_residuals(False)
+
+        # test to list into a json
+        test_list = test.tolist()
+
+        with open('residuals.json', 'w') as f:
+            json.dump(test_list, f)
+
+        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.set_xlabel("Time (ln(tc - t))")
+        ax.set_ylabel("Residuals")
+        ax.set_title("LPPL Residuals")
+        ax.legend()
+
+        if show:
+            plt.show()
 
     def show_spectrum(self,
                       ax=None,
