@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
-from GQLib.LPPL import LPPL
+from GQLib.Models.LPPL import LPPL
 import json
 from GQLib.njitFunc import (
     njit_calculate_fitness,

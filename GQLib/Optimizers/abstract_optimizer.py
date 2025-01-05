@@ -1,20 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
-import random
-from GQLib.LPPL import LPPL
-import json
-from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population,
-    njit_update_position,
-    njit_update_velocity
 
-)
 
 class Optimizer(ABC):
     """
@@ -58,7 +45,7 @@ class Optimizer(ABC):
         """
         pass
 
-    def convert_param_bounds(self, end: float) -> np.ndarray:
+    def convert_param_bounds_lppl(self, end: float) -> np.ndarray:
         """
         Convert parameter bounds to a NumPy array format.
 
@@ -76,6 +63,26 @@ class Optimizer(ABC):
             [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
             [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
             [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
+            [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
+        ], dtype=np.float64)
+    
+    def convert_param_bounds_lppls(self, end: float) -> np.ndarray:
+        """
+        Convert parameter bounds to a NumPy array format.
+
+        Parameters
+        ----------
+        end : float
+            The end time of the subinterval.
+
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (3, 2) representing the bounds for each parameter.
+        """
+        return np.array([
+            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
+            [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
 

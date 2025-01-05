@@ -1,8 +1,7 @@
-from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
 import random
-from GQLib.LPPL import LPPL
+from GQLib.Models import LPPL, LPPLS
 import json
 from .abstract_optimizer import Optimizer
 
@@ -34,7 +33,7 @@ class SA(Optimizer):
         The rate at which the temperature decreases during the algorithm.
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the SA optimizer with the specified frequency and load configuration parameters.
 
@@ -49,6 +48,7 @@ class SA(Optimizer):
             If frequency is not one of the accepted values.
         """
         self.frequency = frequency
+        self.lppl_model = lppl_model
         self.__name__ = self.__class__.__name__.replace("ABC", "")
 
         # Load optimization parameters from a JSON configuration file
@@ -88,12 +88,17 @@ class SA(Optimizer):
             - Best solution as a 1D numpy array containing the optimal parameters for the LPPL model
               (t_c, alpha, omega, phi).
         """
-        param_bounds = self.convert_param_bounds(end)
+        if self.lppl_model == LPPL:
+            param_bounds = self.convert_param_bounds_lppl(end)
+        elif self.lppl_model == LPPLS:
+            param_bounds = self.convert_param_bounds_lppls(end)
+        else:
+            raise ValueError("Invalid model type.")
 
         # Initialize the current solution randomly within parameter bounds
         current_solution = [np.random.uniform(low, high) for (low, high) in param_bounds]
         best_solution = current_solution[:]
-        current_fitness = LPPL.numba_RSS(current_solution, data)
+        current_fitness = self.lppl_model.numba_RSS(current_solution, data)
         best_fitness = current_fitness
 
         # Temperature initialization
@@ -108,7 +113,7 @@ class SA(Optimizer):
                 candidate_solution[i] = np.random.uniform(low, high)
 
             # Evaluate the fitness of the candidate solution
-            candidate_fitness = LPPL.numba_RSS(candidate_solution, data)
+            candidate_fitness = self.lppl_model.numba_RSS(candidate_solution, data)
 
             # Acceptance probability: Accept better solutions directly, or accept worse ones probabilistically
             if candidate_fitness < current_fitness:

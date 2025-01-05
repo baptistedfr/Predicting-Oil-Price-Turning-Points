@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from GQLib.Optimizers import Optimizer
 from GQLib.LombAnalysis import LombAnalysis
-from GQLib.LPPL import LPPL
+from GQLib.Models import LPPL, LPPLS
 
 class Framework:
     """
@@ -19,7 +19,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily") -> None:
+    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -38,6 +38,8 @@ class Framework:
         if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
+
+        self.lppl_model = lppl_model
 
         self.data = self.load_data()
 
@@ -122,7 +124,7 @@ class Framework:
 
         # Optimize parameters for each subinterval
         for (sub_start, sub_end, sub_data) in tqdm(self.subintervals, desc="Processing subintervals", unit="subinterval"):
-            optimizer = optimizer_class(self.frequency)
+            optimizer = optimizer_class(self.frequency, self.lppl_model)
             bestObjV, bestParams = optimizer.fit(sub_start, sub_end, sub_data)
             self.results.append({
                 "sub_start": sub_start,
@@ -174,13 +176,13 @@ class Framework:
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
         for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
-            tc, omega, phi, alpha = res["bestParams"]
+
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, omega, phi, alpha))
+            lomb = LombAnalysis(self.lppl_model(t_sub, y_sub, res["bestParams"]))
             lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
@@ -227,14 +229,14 @@ class Framework:
         with open(file_name, "w") as f:
             json.dump(results, f, indent=4)
 
-    def show_lppl(self, lppl: LPPL, ax=None, show: bool = False) -> None:
+    def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
         """
-        Visualize the LPPL fit alongside observed data.
+        Visualize the LPPL or LPPLS fit alongside observed data.
 
         Parameters
         ----------
-        lppl : LPPL
-            An instance of the LPPL model with fitted parameters.
+        lppl : LPPL or LPPLS
+            An instance of the LPPL or LPPLS model with fitted parameters.
         ax : matplotlib.axes.Axes, optional
             An axis to plot on. If None, creates a new figure.
         show : bool, optional
@@ -243,10 +245,10 @@ class Framework:
 
         length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
 
-        # Calculer la longueur maximale disponible
+        # Calculate the maximum available length
         max_length = len(self.global_prices)
 
-        # Ajuster length_extended pour qu'il ne dépasse pas la longueur disponible
+        # Adjust length_extended so it does not exceed the available length
         length_extended = min(length_extended, max_length)
 
         extended_t = np.arange(lppl.t[0], length_extended)

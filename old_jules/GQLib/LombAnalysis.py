@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
-from GQLib.LPPL import LPPL
+from GQLib.Models.LPPL import LPPL
 import json
 
 class LombAnalysis:

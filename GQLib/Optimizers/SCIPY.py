@@ -1,6 +1,5 @@
 import json
 from typing import Tuple
-
 import numpy as np
 
 from GQLib.Models import LPPL, LPPLS
@@ -16,7 +15,7 @@ from GQLib.njitFunc import (
 from .abstract_optimizer import Optimizer
 
 
-class MPGA(Optimizer):
+class SCIPY(Optimizer):
     """
     Multi-Population Genetic Algorithm (MPGA) for optimizing LPPL parameters.
 
@@ -47,10 +46,7 @@ class MPGA(Optimizer):
             params = json.load(f)
 
         self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
-        self.NUM_POPULATIONS = params["NUM_POPULATIONS"]
-        self.POPULATION_SIZE = params["POPULATION_SIZE"]
-        self.MAX_GEN = params["MAX_GEN"]
-        self.STOP_GEN = params["STOP_GEN"]
+
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """

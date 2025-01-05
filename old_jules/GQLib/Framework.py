@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from GQLib.Optimizers import Optimizer
 from GQLib.LombAnalysis import LombAnalysis
-from GQLib.LPPL import LPPL
+from GQLib.Models.LPPL import LPPL
 
 class Framework:
     """

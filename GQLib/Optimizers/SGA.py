@@ -1,10 +1,8 @@
-from abc import ABC, abstractmethod
 from .abstract_optimizer import Optimizer
 from typing import Tuple
 import numpy as np
-import random
-from GQLib.LPPL import LPPL
 import json
+from GQLib.Models import LPPL, LPPLS
 from GQLib.njitFunc import (
     njit_calculate_fitness,
     njit_selection,
@@ -21,7 +19,7 @@ class SGA(Optimizer):
     This optimizer evolves a single population through selection, crossover, mutation to minimize the Residual Sum of Squares (RSS).
     """
 
-    def __init__(self, frequency: str) -> None:
+    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the SGA optimizer.
 
@@ -36,6 +34,7 @@ class SGA(Optimizer):
             If frequency is not one of the accepted values.
         """
         self.frequency = frequency
+        self.lppl_model = lppl_model
         self.__name__ = self.__class__.__name__.replace("ABC", "")
 
         # Load optimization parameters from a JSON configuration file
@@ -68,7 +67,13 @@ class SGA(Optimizer):
             - Best fitness value (RSS) as a float.
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
-        param_bounds = self.convert_param_bounds(end)
+
+        if self.lppl_model == LPPL:
+            param_bounds = self.convert_param_bounds_lppl(end)
+        elif self.lppl_model == LPPLS:
+            param_bounds = self.convert_param_bounds_lppls(end)
+        else:
+            raise ValueError("Invalid model type.")
 
         # Generate random probabilities for crossover and mutation
         crossover_prob = np.random.uniform(0.001, 0.05)
@@ -222,4 +227,4 @@ class SGA(Optimizer):
         np.ndarray
             RSS fitness values for the population.
         """
-        return njit_calculate_fitness(population, data)
+        return njit_calculate_fitness(population, data, self.lppl_model)

@@ -1,7 +1,6 @@
 import numpy as np
-from numba import njit
 from matplotlib import pyplot as plt
-from .njitFunc import njit_RSS
+from ..njitFunc import njit_RSS_LPPL
 
 class LPPL:
     """
@@ -30,7 +29,7 @@ class LPPL:
         Residuals of the model fit, computed after fitting.
     """
 
-    def __init__(self, t, y, tc, omega, phi, alpha):
+    def __init__(self, t, y, params):
         """
         Initialize the LPPL model with time series data and parameters.
 
@@ -51,13 +50,13 @@ class LPPL:
         """
         self.t = t
         self.y = y
-        self.tc = tc
-        self.omega = omega
-        self.phi = phi
-        self.alpha = alpha
+
+        self.tc, self.omega, self.phi, self.alpha = params
 
         self._compute_linear_params()
         self.residuals = None
+
+        self.__name__ = "LPPL"
 
     def __repr__(self):
         """
@@ -175,4 +174,4 @@ class LPPL:
         float
             Residual Sum of Squares (RSS) value for the given parameters and data.
         """
-        return njit_RSS(chromosome, data)
+        return njit_RSS_LPPL(chromosome, data)
