@@ -1,0 +1,41 @@
+{
+    "WEEKLY_PARAM_BOUNDS": {
+        "t_c": [
+            0,
+            520
+        ],
+        "omega": [
+            0,
+            40
+        ],
+        "phi": [
+            0,
+            6.283185307179586
+        ],
+        "alpha": [
+            0.1,
+            0.9
+        ]
+    },
+    "DAILY_PARAM_BOUNDS": {
+        "t_c": [
+            0,
+            2520
+        ],
+        "omega": [
+            0,
+            40
+        ],
+        "phi": [
+            0,
+            6.283185307179586
+        ],
+        "alpha": [
+            0.1,
+            0.9
+        ]
+    },
+    "NB_ITERATION": 3000,
+    "PROPOSAL_STD": 0.25,
+    "BURNIN_PERIOD": 1000
+}

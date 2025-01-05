@@ -1,5 +1,5 @@
 from GQLib.Framework import Framework
-from GQLib.Optimizers import MPGA, PSO, SA, SGA
+from GQLib.Optimizers import MPGA, PSO, SA, SGA, MCMC, NELDER_MEAD
 from datetime import datetime
 from GQLib.Models import LPPL, LPPLS
 
@@ -7,9 +7,11 @@ freq = "daily"
 model = LPPLS
 
 fw = Framework(freq, model)
-optimizers = [MPGA, PSO, SA, SGA]
+optimizers = [NELDER_MEAD]
 dates_sets = {
     "Set 1": ("01/04/2003", "02/01/2008"),
+    "Set 2": ("01/02/2007", "01/02/2011"),
+    "Set 3": ("29/04/2011", "01/08/2015"),
 }
 
 for optimizer in optimizers:
