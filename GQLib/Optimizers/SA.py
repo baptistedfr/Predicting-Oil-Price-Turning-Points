@@ -33,7 +33,7 @@ class SA(Optimizer):
         The rate at which the temperature decreases during the algorithm.
     """
 
-    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the SA optimizer with the specified frequency and load configuration parameters.
 
@@ -47,18 +47,12 @@ class SA(Optimizer):
         ValueError
             If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
+
         self.lppl_model = lppl_model
-        self.__name__ = self.__class__.__name__.replace("ABC", "")
-
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_sa.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
-        self.MAX_ITER = params["MAX_ITER"]
-        self.INITIAL_TEMP = params["INITIAL_TEMP"]
-        self.COOLING_RATE = params["COOLING_RATE"]
+        self.MAX_ITER = None
+        self.INITIAL_TEMP = None
+        self.COOLING_RATE = None
+    
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """
@@ -95,6 +89,7 @@ class SA(Optimizer):
         else:
             raise ValueError("Invalid model type.")
 
+        self.fitness_history = []
         # Initialize the current solution randomly within parameter bounds
         current_solution = [np.random.uniform(low, high) for (low, high) in param_bounds]
         best_solution = current_solution[:]

@@ -19,7 +19,7 @@ class SGA(Optimizer):
     This optimizer evolves a single population through selection, crossover, mutation to minimize the Residual Sum of Squares (RSS).
     """
 
-    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the SGA optimizer.
 
@@ -33,18 +33,12 @@ class SGA(Optimizer):
         ValueError
             If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
         self.lppl_model = lppl_model
         self.__name__ = self.__class__.__name__.replace("ABC", "")
 
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_sga.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
-        self.POPULATION_SIZE = params["POPULATION_SIZE"]
-        self.MAX_GEN = params["MAX_GEN"]
-        self.STOP_GEN = params["STOP_GEN"]
+        self.POPULATION_SIZE = None
+        self.MAX_GEN = None
+        self.STOP_GEN = None
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """
@@ -74,6 +68,8 @@ class SGA(Optimizer):
             param_bounds = self.convert_param_bounds_lppls(end)
         else:
             raise ValueError("Invalid model type.")
+
+        self.fitness_history = []
 
         # Generate random probabilities for crossover and mutation
         crossover_prob = np.random.uniform(0.001, 0.05)

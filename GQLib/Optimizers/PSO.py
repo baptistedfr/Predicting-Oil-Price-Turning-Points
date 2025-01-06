@@ -21,7 +21,7 @@ class PSO(Optimizer):
     Over successive iterations, particles communicate and learn from each other, progressively converging towards the optimal region of the search space.
     """
 
-    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPL, w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL, w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
         """
         Initialize the PSO optimizer.
 
@@ -47,20 +47,14 @@ class PSO(Optimizer):
         ValueError
             If frequency is not one of the accepted values.
         """
-        self.frequency = frequency
         self.lppl_model = lppl_model
-        self.__name__ = self.__class__.__name__.replace("ABC", "")
 
         self.w = w # Inertia weight
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_pso.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
-        self.NUM_PARTICLES = params["NUM_PARTICLES"]
-        self.MAX_GEN = params["MAX_GEN"]
+        
+        self.NUM_PARTICLES = None
+        self.MAX_GEN = None
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         """
@@ -89,7 +83,8 @@ class PSO(Optimizer):
             param_bounds = self.convert_param_bounds_lppls(end)
         else:
             raise ValueError("Invalid model type.")
-
+        self.fitness_history = []
+        self.fitness_history = []
         # Initialize particles with initial fitness values
         particles = [
             Particle(param_bounds, data, self.lppl_model, w = self.w, c1 = self.c1, c2 =  self.c2)

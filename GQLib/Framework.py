@@ -3,7 +3,8 @@ import pandas as pd
 import json
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-
+from datetime import datetime
+from .Optimizers import MPGA, PSO, SGA, SA
 from GQLib.Optimizers import Optimizer
 from GQLib.LombAnalysis import LombAnalysis
 from GQLib.Models import LPPL, LPPLS
@@ -19,7 +20,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
+    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -41,13 +42,13 @@ class Framework:
 
         self.lppl_model = lppl_model
 
-        self.data = self.load_data()
+        self.data = self.load_data(is_uso)
 
         self.global_times = self.data[:, 0].astype(float)
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
-    def load_data(self) -> np.ndarray:
+    def load_data(self, is_uso) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
 
@@ -65,11 +66,18 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        data = pd.read_csv(f'./data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
-        data.columns = ["Date", "Price"]
+        if is_uso == False:
+            data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
+            data.columns = ["Date", "Price"]
+            data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+        else:
+            data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
+            data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
+            data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y").values.astype("datetime64[D]")
+
 
         # Date conversion and sorting
-        data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+        
         data = data.sort_values(by="Date")
 
         # Add numeric time index
@@ -78,28 +86,9 @@ class Framework:
 
         return data
 
-    def select_sample(self) -> np.ndarray:
-        """
-        Select a sample from the global time series based on a user-defined date range.
+    
 
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (M, 2), where:
-            - Column 0: Numeric time indices (float).
-            - Column 1: Prices (float).
-        """
-        # Convert start and end dates to datetime64
-        start_dt = np.datetime64(pd.to_datetime(self.time_start, format="%d/%m/%Y"))
-        end_dt = np.datetime64(pd.to_datetime(self.time_end, format="%d/%m/%Y"))
-
-        # Filter rows within the specified date range
-        mask = (self.data[:, 1] >= start_dt) & (self.data[:, 1] <= end_dt)
-        sample = self.data[mask]
-
-        return sample[:, [0, 2]].astype(float)
-
-    def process(self, time_start: str, time_end: str, optimizer_class: Optimizer) -> None:
+    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
 
@@ -112,29 +101,30 @@ class Framework:
         optimizer_class : Optimizer
             A class for optimizing LPPL parameters.
         """
-        self.time_start = time_start
-        self.time_end = time_end
-        self.sample = self.select_sample()
+        optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
+        # Select data sample
+        sample = self.select_sample(self.data, time_start, time_end) 
 
         # Generate subintervals
-        self.generate_subintervals()
+        subintervals = self.generate_subintervals(self.frequency, sample)
 
         # Store optimization results
-        self.results = []
+        results = []
 
         # Optimize parameters for each subinterval
-        for (sub_start, sub_end, sub_data) in tqdm(self.subintervals, desc="Processing subintervals", unit="subinterval"):
-            optimizer = optimizer_class(self.frequency, self.lppl_model)
+        for (sub_start, sub_end, sub_data) in tqdm(subintervals, desc="Processing subintervals", unit="subinterval"):
+            
             bestObjV, bestParams = optimizer.fit(sub_start, sub_end, sub_data)
-            self.results.append({
+            results.append({
                 "sub_start": sub_start,
                 "sub_end": sub_end,
                 "bestObjV": bestObjV,
                 "bestParams": bestParams.tolist()
             })
-        return self.results
+        return results
 
     def analyze(self,
+                results : dict = None,
                 result_json_name: dict = None,
                 use_package: bool = False,
                 remove_mpf: bool = True,
@@ -164,18 +154,18 @@ class Framework:
 
         if result_json_name is not None:
             with open(result_json_name, "r") as f:
-                self.results = json.load(f)
+                results = json.load(f)
 
-        self.best_results = []
+        best_results = []
 
         # Visualizations if requested
         if show:
-            num_intervals = len(self.results)
+            num_intervals = len(results)
             num_cols = 3
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
-        for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
+        for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
 
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
@@ -203,7 +193,7 @@ class Framework:
 
 
 
-            self.best_results.append({
+            best_results.append({
                 "sub_start": res["sub_start"],
                 "sub_end": res["sub_end"],
                 "bestObjV": res["bestObjV"],
@@ -215,19 +205,7 @@ class Framework:
             plt.tight_layout()
             plt.show()
 
-    def save_results(self, results: dict, file_name: str) -> None:
-        """
-        Save results to a JSON file.
-
-        Parameters
-        ----------
-        results : dict
-            Results to be saved.
-        file_name : str
-            Path to the output JSON file.
-        """
-        with open(file_name, "w") as f:
-            json.dump(results, f, indent=4)
+        return best_results
 
     def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
         """
@@ -273,15 +251,42 @@ class Framework:
         if show:
             plt.show()
 
-    def visualize(self) -> None:
+    def visualize(self, best_results : dict, name = "", start_date: str = None, end_date: str = None) -> None:
         """
         Visualize significant critical times on the price series.
+        Permet de filtrer et d'afficher les résultats pour une plage de dates spécifique.
+        
+        Args:
+            best_results (dict): Résultats optimaux contenant les informations des turning points.
+            name (str): Nom du graphique.
+            start_date (str): Date de début (format: 'YYYY-MM-DD'). Si None, utilise le début des données.
+            end_date (str): Date de fin (format: 'YYYY-MM-DD'). Si None, utilise la fin des données.
         """
         significant_tc = []
         min_time = np.inf
         max_time = -np.inf
 
-        for res in self.best_results:
+        if start_date is not None:
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+        else:
+            start_date = self.global_dates.min()
+        
+        if end_date is not None:
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+        else:
+            end_date = self.global_dates.max()
+
+        filtered_indices = [
+            i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date
+        ]
+        if not filtered_indices:
+            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
+            return
+        
+        filtered_dates = [self.global_dates[i] for i in filtered_indices]
+        filtered_prices = [self.global_prices[i] for i in filtered_indices]
+
+        for res in best_results:
             if res["sub_start"] < min_time:
                 min_time = res["sub_start"]
             if res["sub_end"] > max_time:
@@ -290,41 +295,137 @@ class Framework:
                 significant_tc.append(res["bestParams"][0])
 
         plt.figure(figsize=(12, 6))
-        plt.plot(self.global_dates, self.global_prices, label="Data", color="black")
-        plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
-        plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
+        plt.plot(filtered_dates, filtered_prices, label="Data", color="black")
+        if start_date <= self.global_dates[int(min_time)] <= end_date:
+            plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
+        if start_date <= self.global_dates[int(max_time)] <= end_date:
+            plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
+        # plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
+        # plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
+        # for tc in significant_tc:
+        #     plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
         for tc in significant_tc:
-            if tc < (len(self.global_dates) - 1):
-                plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
-
+            try:
+                date_tc = self.global_dates[int(round(tc))]
+                if start_date <= date_tc <= end_date:
+                    plt.axvline(x=date_tc, color="red", linestyle=":")
+            except:
+                continue
+            
+        plt.title(name)
         plt.xlabel("Date")
         plt.ylabel("Price")
         plt.legend()
         plt.show()
 
-    def generate_subintervals(self) -> None:
+    def generate_all_dates(self, optimizers : list =  [PSO(), MPGA(), SA(), SGA()]):
+        dates_sets = {
+            "Set 1": ("01/04/2003", "02/01/2008"),
+            "Set 2": ("01/02/2007", "01/02/2011"),
+            "Set 3": ("29/04/2011", "01/08/2015"),
+        }
+        print(f"FREQUENCY : {self.frequency}")
+        for optimizer in optimizers:
+            print(f"Running process for {optimizer.__class__.__name__}\n")
+            for set_name, (start_date, end_date) in dates_sets.items():
+                print(f"Running process for {set_name} from {start_date} to {end_date}")
+                # Exécute le processus d'optimisation pour l'intervalle de dates donné
+                results = self.process(start_date, end_date, optimizer)
+                # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
+                start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
+                end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
+                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+                # Sauvegarde des résultats au format JSON dans le fichier généré
+                self.save_results(results, filename)
+                # Verification de la significativité des résultats
+                best_results = self.analyze(results)
+                # Visualisation des résultats finaux
+                self.visualize(best_results, optimizer.__class__.__name__)
+
+    @staticmethod
+    def generate_subintervals(frequency :str, sample : np.asarray) -> list:
         """
         Generate subintervals based on the frequency and pseudo-code logic.
-        """
-        time_start = self.sample[0, 0]
-        time_end = self.sample[-1, 0]
+        Parameters
+        ----------
+        frequency : str
+            The frequency of analysis, e.g., 'daily', 'weekly', or 'monthly'.
+        sample : np.ndarray
+            The dataset for a specific sample with columns: time index and price.
 
-        if self.frequency == "daily":
+        Returns
+        -------
+        list
+            A list of tuples representing subintervals. Each tuple contains:
+            - Start time of the subinterval (float).
+            - End time of the subinterval (float).
+            - Sub-sample data (np.ndarray) within the interval.
+        """
+        time_start = sample[0, 0]
+        time_end = sample[-1, 0]
+
+        if frequency == "daily":
             freq_list = [15, 30, 5]
-        elif self.frequency == "weekly":
+        elif frequency == "weekly":
             freq_list = [3.0, 6.0, 1.0]
-        elif self.frequency == "monthly":
+        elif frequency == "monthly":
             freq_list = [0.75, 1.5, 0.25]
 
         three_weeks, six_weeks, one_week = freq_list
         total_days = (time_end - time_start)
         delta = max((total_days * 0.75) / three_weeks, three_weeks)
 
-        self.subintervals = []
+        subintervals = []
         for sub_end in np.arange(time_end, time_end - six_weeks, -one_week):
             for sub_st in np.arange(time_start, time_end - total_days / 4, delta):
-                mask = (self.sample[:, 0] >= sub_st) & (self.sample[:, 0] <= sub_end)
-                sub_sample = self.sample[mask]
+                mask = (sample[:, 0] >= sub_st) & (sample[:, 0] <= sub_end)
+                sub_sample = sample[mask]
                 if len(sub_sample) > 0:
-                    self.subintervals.append((sub_st, sub_end, sub_sample))
+                    subintervals.append((sub_st, sub_end, sub_sample))
+        return subintervals
+
+    @staticmethod
+    def select_sample(data : np.asarray, time_start: str, time_end: str) -> np.ndarray:
+        """
+        Select a sample from the global time series based on a user-defined date range.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            The global dataset as a NumPy array with columns: time index, date, and price.
+        time_start : str
+            The start date for the selection in the format "%d/%m/%Y".
+        time_end : str
+            The end date for the selection in the format "%d/%m/%Y".
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (M, 2), where:
+            - Column 0: Numeric time indices (float).
+            - Column 1: Prices (float).
+        """
+        # Convert start and end dates to datetime64
+        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
+        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
+
+        # Filter rows within the specified date range
+        mask = (data[:, 1] >= start_dt) & (data[:, 1] <= end_dt)
+        sample = data[mask]
+
+        return sample[:, [0, 2]].astype(float)
+
+    @staticmethod
+    def save_results(results: dict, file_name: str) -> None:
+        """
+        Save results to a JSON file.
+
+        Parameters
+        ----------
+        results : dict
+            Results to be saved.
+        file_name : str
+            Path to the output JSON file.
+        """
+        with open(file_name, "w") as f:
+            json.dump(results, f, indent=4)

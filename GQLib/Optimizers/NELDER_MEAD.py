@@ -9,18 +9,14 @@ from .abstract_optimizer import Optimizer
 
 class NELDER_MEAD(Optimizer):
 
-    def __init__(self, frequency: str, lppl_model: 'LPPL | LPPLS' = LPPLS) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPLS) -> None:
 
-        self.frequency = frequency
         self.lppl_model = lppl_model
-        self.__name__ = self.__class__.__name__.replace("ABC", "")
-
-        # Load optimization parameters from a JSON configuration file
-        with open("params/params_mpga.json", "r") as f:
-            params = json.load(f)
-
-        self.PARAM_BOUNDS = params[f"{self.frequency.upper()}_PARAM_BOUNDS"]
-
+        self.NUM_POPULATIONS = None
+        self.POPULATION_SIZE = None
+        self.MAX_GEN = None
+        self.STOP_GEN = None
+        
 
     def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
         if self.lppl_model == LPPL:
