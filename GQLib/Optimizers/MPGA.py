@@ -71,7 +71,7 @@ class MPGA(GeneticAlgorithm):
         bestChrom = None
 
         for m in range(self.NUM_POPULATIONS):
-            fit = self.calculate_fitness(populations[m], data)
+            fit = self.calculate_fitness(populations[m], data, self.lppl_model)
             fitness_values.append(fit)
             local_min = np.min(fit)
 
@@ -101,7 +101,7 @@ class MPGA(GeneticAlgorithm):
             # Recompute fitness values
             fitness_values = []
             for m in range(self.NUM_POPULATIONS):
-                fit = np.array([LPPL.numba_RSS(ch, data) for ch in populations[m]])
+                fit = np.array([self.lppl_model.numba_RSS(ch, data) for ch in populations[m]])
                 fitness_values.append(fit)
 
             # Check for global best solution

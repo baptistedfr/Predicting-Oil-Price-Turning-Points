@@ -10,7 +10,7 @@ from GQLib.njitFunc import (
 )
 import plotly.graph_objects as go
 import json
-
+from ..Models import LPPL, LPPLS
 class Optimizer(ABC):
     """
     Abstract base class for optimizers.
@@ -159,7 +159,7 @@ class GeneticAlgorithm(Optimizer):
         - Population fitness
         - Process of : selection, mutation and crossover
     """
-
+    
     def initialize_population(self, param_bounds: np.ndarray, population_size: int) -> np.ndarray:
         """
         Initialize a population of chromosomes.
@@ -178,7 +178,7 @@ class GeneticAlgorithm(Optimizer):
         """
         return njit_initialize_population(param_bounds, population_size)
 
-    def calculate_fitness(self, population: np.ndarray, data: np.ndarray) -> np.ndarray:
+    def calculate_fitness(self, population: np.ndarray, data: np.ndarray, lppl_model: 'LPPL | LPPLS' = LPPL ) -> np.ndarray:
         """
         Calculate the RSS fitness for each individual in the population.
 
@@ -194,7 +194,7 @@ class GeneticAlgorithm(Optimizer):
         np.ndarray
             RSS fitness values for the population.
         """
-        return njit_calculate_fitness(population, data)
+        return njit_calculate_fitness(population, data, lppl_model)
     
     def selection(self, population: np.ndarray, fitness: np.ndarray) -> np.ndarray:
         """
