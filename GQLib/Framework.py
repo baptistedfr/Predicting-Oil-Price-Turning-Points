@@ -20,7 +20,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False) -> None:
+    def __init__(self, frequency: str = "daily", is_uso : bool = False) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -39,8 +39,6 @@ class Framework:
         if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
-
-        self.lppl_model = lppl_model
 
         self.data = self.load_data(is_uso)
 
@@ -86,7 +84,6 @@ class Framework:
 
         return data
 
-    
 
     def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
         """
@@ -129,7 +126,8 @@ class Framework:
                 use_package: bool = False,
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
-                show: bool = False) -> dict:
+                show: bool = False,
+                lppl_model: 'LPPL | LPPLS' = LPPL) -> dict:
         """
         Analyze results using Lomb-Scargle periodogram and identify significant critical times.
 
@@ -149,7 +147,7 @@ class Framework:
         dict
             An updated list of results with significance flags.
         """
-        if result_json_name is None and self.results is None:
+        if result_json_name is None and results is None:
             raise ValueError("Results must be provided.")
 
         if result_json_name is not None:
@@ -172,7 +170,7 @@ class Framework:
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(self.lppl_model(t_sub, y_sub, res["bestParams"]))
+            lomb = LombAnalysis(lppl_model(t_sub, y_sub, res["bestParams"]))
             lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
