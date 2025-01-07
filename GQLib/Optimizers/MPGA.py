@@ -1,6 +1,6 @@
 from GQLib.njitFunc import njit_immigration_operation
-from .abstract_optimizers import GeneticAlgorithm
-from GQLib.LPPL import LPPL
+from .abstract_optimizer import GeneticAlgorithm
+from GQLib.Models import LPPL, LPPLS
 from typing import Tuple
 import numpy as np
 import json
@@ -14,12 +14,12 @@ class MPGA(GeneticAlgorithm):
     and immigration operations to minimize the Residual Sum of Squares (RSS).
     """
 
-    def __init__(self) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the MPGA optimizer.
 
         """
-
+        self.lppl_model = lppl_model
         self.NUM_POPULATIONS = None
         self.POPULATION_SIZE = None
         self.MAX_GEN = None
@@ -46,7 +46,13 @@ class MPGA(GeneticAlgorithm):
             - Best fitness value (RSS) as a float.
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
-        param_bounds = self.convert_param_bounds(end)
+        if self.lppl_model == LPPL:
+            param_bounds = self.convert_param_bounds_lppl(end)
+        elif self.lppl_model == LPPLS:
+            param_bounds = self.convert_param_bounds_lppls(end)
+        else:
+            raise ValueError("Invalid model type.")
+        
         self.fitness_history = [[] for _ in range(self.NUM_POPULATIONS)]
 
         # Generate random probabilities for crossover and mutation
@@ -65,7 +71,7 @@ class MPGA(GeneticAlgorithm):
         bestChrom = None
 
         for m in range(self.NUM_POPULATIONS):
-            fit = self.calculate_fitness(populations[m], data)
+            fit = self.calculate_fitness(populations[m], data, self.lppl_model)
             fitness_values.append(fit)
             local_min = np.min(fit)
 
@@ -95,7 +101,7 @@ class MPGA(GeneticAlgorithm):
             # Recompute fitness values
             fitness_values = []
             for m in range(self.NUM_POPULATIONS):
-                fit = np.array([LPPL.numba_RSS(ch, data) for ch in populations[m]])
+                fit = np.array([self.lppl_model.numba_RSS(ch, data) for ch in populations[m]])
                 fitness_values.append(fit)
 
             # Check for global best solution

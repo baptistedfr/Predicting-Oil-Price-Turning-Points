@@ -1,6 +1,6 @@
-from GQLib.LPPL import LPPL
 from typing import Tuple
 import numpy as np
+from GQLib.Models import LPPL, LPPLS
 import json
 from .abstract_optimizers import Optimizer
 from ..njitFunc import (
@@ -20,7 +20,7 @@ class PSO(Optimizer):
     Over successive iterations, particles communicate and learn from each other, progressively converging towards the optimal region of the search space.
     """
 
-    def __init__(self,  w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL, w: float = 0.8, c1: float = 1.2, c2: float =1.2) -> None:
         """
         Initialize the PSO optimizer.
 
@@ -40,11 +40,12 @@ class PSO(Optimizer):
             The larger the parameter, the closer the particle will want to get to the global best position of the swarm
 
         """
+        self.lppl_model = lppl_model
 
         self.w = w # Inertia weight
         self.c1 = c1 # Cognitive coefficient
         self.c2 = c2 # Social coefficient
-
+        
         self.NUM_PARTICLES = None
         self.MAX_GEN = None
 
@@ -69,12 +70,17 @@ class PSO(Optimizer):
             - Best fitness value (RSS) as a float.
             - Best chromosome (parameters: t_c, alpha, omega, phi) as a 1D NumPy array.
         """
-        param_bounds = self.convert_param_bounds(end)
+        if self.lppl_model == LPPL:
+            param_bounds = self.convert_param_bounds_lppl(end)
+        elif self.lppl_model == LPPLS:
+            param_bounds = self.convert_param_bounds_lppls(end)
+        else:
+            raise ValueError("Invalid model type.")
         self.fitness_history = []
-        
+        self.fitness_history = []
         # Initialize particles with initial fitness values
         particles = [
-            Particle(param_bounds, data, w = self.w, c1 = self.c1, c2 =  self.c2)
+            Particle(param_bounds, data, self.lppl_model, w = self.w, c1 = self.c1, c2 =  self.c2)
             for _ in range(self.NUM_PARTICLES)
         ]
         
@@ -111,7 +117,7 @@ class Particle():
     adjusts its position by considering its own past experiences and the knowledge gained from other particles in the swarm.
     """
 
-    def __init__(self, param_bounds: np.ndarray, data: np.ndarray, 
+    def __init__(self, param_bounds: np.ndarray, data: np.ndarray, lppl_model: 'LPPL | LPPLS' = LPPL,
                  w: float = 0.8, c1: float = 1.2, c2: float =1.2):
         """
         Initialize a particle for particle Swarm Optimisation
@@ -145,6 +151,7 @@ class Particle():
         """
 
         self.param_bounds = param_bounds
+        self.lppl_model = lppl_model
         num_params = self.param_bounds.shape[0]  # D
         self.position = np.empty(num_params, dtype=np.float64)
 
@@ -177,7 +184,7 @@ class Particle():
                 - Column 1 is the observed price.
         """
         # Call numba fonction of the LPPL model to compute fitness
-        self.fitness = LPPL.numba_RSS(self.position, data)
+        fit = self.lppl_model.numba_RSS(self.position, data)
 
         # Update the particle best position and best fitness associated
         if self.fitness < self.local_best_fitness:

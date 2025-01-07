@@ -1,5 +1,9 @@
 import numpy as np
 from numba import njit
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from GQLib.Models import LPPL, LPPLS
 
 @njit
 def njit_initialize_population(param_bounds: np.ndarray, population_size: int) -> np.ndarray:
@@ -198,7 +202,7 @@ def njit_immigration_operation(populations: np.ndarray, fitness_values: np.ndarr
     return populations
 
 @njit
-def njit_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
+def njit_RSS_LPPL(chromosome: np.ndarray, data: np.ndarray) -> float:
     """
     Compute the residual sum of squares (RSS) for the simplified LPPL model:
         y(t) ~ A + B * (t_c - t)^alpha + C * (t_c - t)^alpha * cos(omega ln(t_c - t) + phi).
@@ -206,7 +210,7 @@ def njit_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
     Parameters
     ----------
     chromosome : np.ndarray, shape (4,)
-        The nonlinear parameters: [t_c, alpha, omega, phi].
+        The nonlinear parameters: [t_c, omega, phi, alpha].
     data : np.ndarray, shape (J, 2)
         The time series data. data[:,0] = t, data[:,1] = y.
 
@@ -236,7 +240,45 @@ def njit_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
     return np.sum((y - predicted)**2)
 
 @njit
-def njit_calculate_fitness(population: np.ndarray, data: np.ndarray) -> np.ndarray:
+def njit_RSS_LPPLS(chromosome: np.ndarray, data: np.ndarray) -> float:
+    """
+    Compute the residual sum of squares (RSS) for the simplified LPPL model:
+        y(t) ~ A + B * (t_c - t)^alpha + C1 * (t_c - t)^alpha * cos(omega ln(t_c - t)) + C2 * (t_c - t)^alpha * sin(omega ln(t_c - t)).
+
+    Parameters
+    ----------
+    chromosome : np.ndarray, shape (3,)
+        The nonlinear parameters: [t_c, omega, alpha].
+    data : np.ndarray, shape (J, 2)
+        The time series data. data[:,0] = t, data[:,1] = y.
+
+    Returns
+    -------
+    float
+        The RSS value of the fit. If the linear system is non-invertible, returns np.inf.
+    """
+    y = data[:, 1]
+    t = data[:, 0]
+    t_c, omega, alpha = chromosome
+
+    dt = t_c - t
+    f = dt ** alpha
+    g = f * np.cos(omega * np.log(dt))
+    h = f * np.sin(omega * np.log(dt))
+
+    # Build design matrix
+    V = np.column_stack((np.ones_like(f), f, g, h))
+    # Attempt to invert (V^T V)
+    try:
+        params = np.linalg.inv(V.T @ V) @ (V.T @ y)
+        A, B, C1, C2 = params[0], params[1], params[2], params[3]
+    except:
+        return np.inf
+
+    predicted = A + B*f + C1*g + C2*h
+    return np.sum((y - predicted)**2)
+
+def njit_calculate_fitness(population: np.ndarray, data: np.ndarray, lppl_model: 'LPPL | LPPLS') -> np.ndarray:
     """
     Calculate the fitness (RSS) for each chromosome in the population.
 
@@ -255,7 +297,7 @@ def njit_calculate_fitness(population: np.ndarray, data: np.ndarray) -> np.ndarr
     n = len(population)
     fitness = np.empty(n, dtype=np.float64)
     for i in range(n):
-        fitness[i] = njit_RSS(population[i], data)
+        fitness[i] = lppl_model.numba_RSS(population[i], data)
     return fitness
 
 @njit

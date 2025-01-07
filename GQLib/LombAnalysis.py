@@ -1,8 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
-from .LPPL import LPPL
-import json
+from .Models import LPPL
 
 class LombAnalysis:
     """
@@ -53,6 +52,30 @@ class LombAnalysis:
         dt = np.abs(self.lppl.tc - self.lppl.t)
         return np.log(dt)
 
+
+    def show_residuals(self, ax=None, show: bool = False) -> None:
+        """
+        Visualize the residuals of the LPPL model.
+
+        Parameters
+        ----------
+        ax : matplotlib.axes.Axes, optional
+            Matplotlib axis object to use for the plot (default: None).
+        show : bool
+            Whether to display the plot (default: False).
+        """
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.set_xlabel("Time (ln(tc - t))")
+        ax.set_ylabel("Residuals")
+        ax.set_title("LPPL Residuals")
+        ax.legend()
+
+        if show:
+            plt.show()
     
     def compute_lomb_periodogram(self, use_package: bool = False) -> tuple[np.ndarray, np.ndarray]:
         """

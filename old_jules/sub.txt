@@ -1,0 +1,629 @@
+Population number  1  : 
+Starting date :  1.0
+Ending date :  3427.0
+Number of days :  3427
+
+Population number  2  : 
+Starting date :  123.0
+Ending date :  3427.0
+Number of days :  3304
+
+Population number  3  : 
+Starting date :  245.0
+Ending date :  3427.0
+Number of days :  3182
+
+Population number  4  : 
+Starting date :  368.0
+Ending date :  3427.0
+Number of days :  3059
+
+Population number  5  : 
+Starting date :  490.0
+Ending date :  3427.0
+Number of days :  2937
+
+Population number  6  : 
+Starting date :  612.0
+Ending date :  3427.0
+Number of days :  2815
+
+Population number  7  : 
+Starting date :  735.0
+Ending date :  3427.0
+Number of days :  2692
+
+Population number  8  : 
+Starting date :  857.0
+Ending date :  3427.0
+Number of days :  2570
+
+Population number  9  : 
+Starting date :  979.0
+Ending date :  3427.0
+Number of days :  2448
+
+Population number  10  : 
+Starting date :  1102.0
+Ending date :  3427.0
+Number of days :  2325
+
+Population number  11  : 
+Starting date :  1224.0
+Ending date :  3427.0
+Number of days :  2203
+
+Population number  12  : 
+Starting date :  1346.0
+Ending date :  3427.0
+Number of days :  2081
+
+Population number  13  : 
+Starting date :  1469.0
+Ending date :  3427.0
+Number of days :  1958
+
+Population number  14  : 
+Starting date :  1591.0
+Ending date :  3427.0
+Number of days :  1836
+
+Population number  15  : 
+Starting date :  1714.0
+Ending date :  3427.0
+Number of days :  1714
+
+Population number  16  : 
+Starting date :  1836.0
+Ending date :  3427.0
+Number of days :  1591
+
+Population number  17  : 
+Starting date :  1958.0
+Ending date :  3427.0
+Number of days :  1469
+
+Population number  18  : 
+Starting date :  2081.0
+Ending date :  3427.0
+Number of days :  1346
+
+Population number  19  : 
+Starting date :  2203.0
+Ending date :  3427.0
+Number of days :  1224
+
+Population number  20  : 
+Starting date :  2325.0
+Ending date :  3427.0
+Number of days :  1102
+
+Population number  21  : 
+Starting date :  2448.0
+Ending date :  3427.0
+Number of days :  979
+
+Population number  22  : 
+Starting date :  1.0
+Ending date :  3420.0
+Number of days :  3420
+
+Population number  23  : 
+Starting date :  123.0
+Ending date :  3420.0
+Number of days :  3297
+
+Population number  24  : 
+Starting date :  245.0
+Ending date :  3420.0
+Number of days :  3175
+
+Population number  25  : 
+Starting date :  368.0
+Ending date :  3420.0
+Number of days :  3052
+
+Population number  26  : 
+Starting date :  490.0
+Ending date :  3420.0
+Number of days :  2930
+
+Population number  27  : 
+Starting date :  612.0
+Ending date :  3420.0
+Number of days :  2808
+
+Population number  28  : 
+Starting date :  735.0
+Ending date :  3420.0
+Number of days :  2685
+
+Population number  29  : 
+Starting date :  857.0
+Ending date :  3420.0
+Number of days :  2563
+
+Population number  30  : 
+Starting date :  979.0
+Ending date :  3420.0
+Number of days :  2441
+
+Population number  31  : 
+Starting date :  1102.0
+Ending date :  3420.0
+Number of days :  2318
+
+Population number  32  : 
+Starting date :  1224.0
+Ending date :  3420.0
+Number of days :  2196
+
+Population number  33  : 
+Starting date :  1346.0
+Ending date :  3420.0
+Number of days :  2074
+
+Population number  34  : 
+Starting date :  1469.0
+Ending date :  3420.0
+Number of days :  1951
+
+Population number  35  : 
+Starting date :  1591.0
+Ending date :  3420.0
+Number of days :  1829
+
+Population number  36  : 
+Starting date :  1714.0
+Ending date :  3420.0
+Number of days :  1707
+
+Population number  37  : 
+Starting date :  1836.0
+Ending date :  3420.0
+Number of days :  1584
+
+Population number  38  : 
+Starting date :  1958.0
+Ending date :  3420.0
+Number of days :  1462
+
+Population number  39  : 
+Starting date :  2081.0
+Ending date :  3420.0
+Number of days :  1339
+
+Population number  40  : 
+Starting date :  2203.0
+Ending date :  3420.0
+Number of days :  1217
+
+Population number  41  : 
+Starting date :  2325.0
+Ending date :  3420.0
+Number of days :  1095
+
+Population number  42  : 
+Starting date :  2448.0
+Ending date :  3420.0
+Number of days :  972
+
+Population number  43  : 
+Starting date :  1.0
+Ending date :  3413.0
+Number of days :  3413
+
+Population number  44  : 
+Starting date :  123.0
+Ending date :  3413.0
+Number of days :  3290
+
+Population number  45  : 
+Starting date :  245.0
+Ending date :  3413.0
+Number of days :  3168
+
+Population number  46  : 
+Starting date :  368.0
+Ending date :  3413.0
+Number of days :  3045
+
+Population number  47  : 
+Starting date :  490.0
+Ending date :  3413.0
+Number of days :  2923
+
+Population number  48  : 
+Starting date :  612.0
+Ending date :  3413.0
+Number of days :  2801
+
+Population number  49  : 
+Starting date :  735.0
+Ending date :  3413.0
+Number of days :  2678
+
+Population number  50  : 
+Starting date :  857.0
+Ending date :  3413.0
+Number of days :  2556
+
+Population number  51  : 
+Starting date :  979.0
+Ending date :  3413.0
+Number of days :  2434
+
+Population number  52  : 
+Starting date :  1102.0
+Ending date :  3413.0
+Number of days :  2311
+
+Population number  53  : 
+Starting date :  1224.0
+Ending date :  3413.0
+Number of days :  2189
+
+Population number  54  : 
+Starting date :  1346.0
+Ending date :  3413.0
+Number of days :  2067
+
+Population number  55  : 
+Starting date :  1469.0
+Ending date :  3413.0
+Number of days :  1944
+
+Population number  56  : 
+Starting date :  1591.0
+Ending date :  3413.0
+Number of days :  1822
+
+Population number  57  : 
+Starting date :  1714.0
+Ending date :  3413.0
+Number of days :  1700
+
+Population number  58  : 
+Starting date :  1836.0
+Ending date :  3413.0
+Number of days :  1577
+
+Population number  59  : 
+Starting date :  1958.0
+Ending date :  3413.0
+Number of days :  1455
+
+Population number  60  : 
+Starting date :  2081.0
+Ending date :  3413.0
+Number of days :  1332
+
+Population number  61  : 
+Starting date :  2203.0
+Ending date :  3413.0
+Number of days :  1210
+
+Population number  62  : 
+Starting date :  2325.0
+Ending date :  3413.0
+Number of days :  1088
+
+Population number  63  : 
+Starting date :  2448.0
+Ending date :  3413.0
+Number of days :  965
+
+Population number  64  : 
+Starting date :  1.0
+Ending date :  3406.0
+Number of days :  3406
+
+Population number  65  : 
+Starting date :  123.0
+Ending date :  3406.0
+Number of days :  3283
+
+Population number  66  : 
+Starting date :  245.0
+Ending date :  3406.0
+Number of days :  3161
+
+Population number  67  : 
+Starting date :  368.0
+Ending date :  3406.0
+Number of days :  3038
+
+Population number  68  : 
+Starting date :  490.0
+Ending date :  3406.0
+Number of days :  2916
+
+Population number  69  : 
+Starting date :  612.0
+Ending date :  3406.0
+Number of days :  2794
+
+Population number  70  : 
+Starting date :  735.0
+Ending date :  3406.0
+Number of days :  2671
+
+Population number  71  : 
+Starting date :  857.0
+Ending date :  3406.0
+Number of days :  2549
+
+Population number  72  : 
+Starting date :  979.0
+Ending date :  3406.0
+Number of days :  2427
+
+Population number  73  : 
+Starting date :  1102.0
+Ending date :  3406.0
+Number of days :  2304
+
+Population number  74  : 
+Starting date :  1224.0
+Ending date :  3406.0
+Number of days :  2182
+
+Population number  75  : 
+Starting date :  1346.0
+Ending date :  3406.0
+Number of days :  2060
+
+Population number  76  : 
+Starting date :  1469.0
+Ending date :  3406.0
+Number of days :  1937
+
+Population number  77  : 
+Starting date :  1591.0
+Ending date :  3406.0
+Number of days :  1815
+
+Population number  78  : 
+Starting date :  1714.0
+Ending date :  3406.0
+Number of days :  1693
+
+Population number  79  : 
+Starting date :  1836.0
+Ending date :  3406.0
+Number of days :  1570
+
+Population number  80  : 
+Starting date :  1958.0
+Ending date :  3406.0
+Number of days :  1448
+
+Population number  81  : 
+Starting date :  2081.0
+Ending date :  3406.0
+Number of days :  1325
+
+Population number  82  : 
+Starting date :  2203.0
+Ending date :  3406.0
+Number of days :  1203
+
+Population number  83  : 
+Starting date :  2325.0
+Ending date :  3406.0
+Number of days :  1081
+
+Population number  84  : 
+Starting date :  2448.0
+Ending date :  3406.0
+Number of days :  958
+
+Population number  85  : 
+Starting date :  1.0
+Ending date :  3399.0
+Number of days :  3399
+
+Population number  86  : 
+Starting date :  123.0
+Ending date :  3399.0
+Number of days :  3276
+
+Population number  87  : 
+Starting date :  245.0
+Ending date :  3399.0
+Number of days :  3154
+
+Population number  88  : 
+Starting date :  368.0
+Ending date :  3399.0
+Number of days :  3031
+
+Population number  89  : 
+Starting date :  490.0
+Ending date :  3399.0
+Number of days :  2909
+
+Population number  90  : 
+Starting date :  612.0
+Ending date :  3399.0
+Number of days :  2787
+
+Population number  91  : 
+Starting date :  735.0
+Ending date :  3399.0
+Number of days :  2664
+
+Population number  92  : 
+Starting date :  857.0
+Ending date :  3399.0
+Number of days :  2542
+
+Population number  93  : 
+Starting date :  979.0
+Ending date :  3399.0
+Number of days :  2420
+
+Population number  94  : 
+Starting date :  1102.0
+Ending date :  3399.0
+Number of days :  2297
+
+Population number  95  : 
+Starting date :  1224.0
+Ending date :  3399.0
+Number of days :  2175
+
+Population number  96  : 
+Starting date :  1346.0
+Ending date :  3399.0
+Number of days :  2053
+
+Population number  97  : 
+Starting date :  1469.0
+Ending date :  3399.0
+Number of days :  1930
+
+Population number  98  : 
+Starting date :  1591.0
+Ending date :  3399.0
+Number of days :  1808
+
+Population number  99  : 
+Starting date :  1714.0
+Ending date :  3399.0
+Number of days :  1686
+
+Population number  100  : 
+Starting date :  1836.0
+Ending date :  3399.0
+Number of days :  1563
+
+Population number  101  : 
+Starting date :  1958.0
+Ending date :  3399.0
+Number of days :  1441
+
+Population number  102  : 
+Starting date :  2081.0
+Ending date :  3399.0
+Number of days :  1318
+
+Population number  103  : 
+Starting date :  2203.0
+Ending date :  3399.0
+Number of days :  1196
+
+Population number  104  : 
+Starting date :  2325.0
+Ending date :  3399.0
+Number of days :  1074
+
+Population number  105  : 
+Starting date :  2448.0
+Ending date :  3399.0
+Number of days :  951
+
+Population number  106  : 
+Starting date :  1.0
+Ending date :  3392.0
+Number of days :  3392
+
+Population number  107  : 
+Starting date :  123.0
+Ending date :  3392.0
+Number of days :  3269
+
+Population number  108  : 
+Starting date :  245.0
+Ending date :  3392.0
+Number of days :  3147
+
+Population number  109  : 
+Starting date :  368.0
+Ending date :  3392.0
+Number of days :  3024
+
+Population number  110  : 
+Starting date :  490.0
+Ending date :  3392.0
+Number of days :  2902
+
+Population number  111  : 
+Starting date :  612.0
+Ending date :  3392.0
+Number of days :  2780
+
+Population number  112  : 
+Starting date :  735.0
+Ending date :  3392.0
+Number of days :  2657
+
+Population number  113  : 
+Starting date :  857.0
+Ending date :  3392.0
+Number of days :  2535
+
+Population number  114  : 
+Starting date :  979.0
+Ending date :  3392.0
+Number of days :  2413
+
+Population number  115  : 
+Starting date :  1102.0
+Ending date :  3392.0
+Number of days :  2290
+
+Population number  116  : 
+Starting date :  1224.0
+Ending date :  3392.0
+Number of days :  2168
+
+Population number  117  : 
+Starting date :  1346.0
+Ending date :  3392.0
+Number of days :  2046
+
+Population number  118  : 
+Starting date :  1469.0
+Ending date :  3392.0
+Number of days :  1923
+
+Population number  119  : 
+Starting date :  1591.0
+Ending date :  3392.0
+Number of days :  1801
+
+Population number  120  : 
+Starting date :  1714.0
+Ending date :  3392.0
+Number of days :  1679
+
+Population number  121  : 
+Starting date :  1836.0
+Ending date :  3392.0
+Number of days :  1556
+
+Population number  122  : 
+Starting date :  1958.0
+Ending date :  3392.0
+Number of days :  1434
+
+Population number  123  : 
+Starting date :  2081.0
+Ending date :  3392.0
+Number of days :  1311
+
+Population number  124  : 
+Starting date :  2203.0
+Ending date :  3392.0
+Number of days :  1189
+
+Population number  125  : 
+Starting date :  2325.0
+Ending date :  3392.0
+Number of days :  1067
+
+Population number  126  : 
+Starting date :  2448.0
+Ending date :  3392.0
+Number of days :  944

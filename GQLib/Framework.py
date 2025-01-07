@@ -4,10 +4,11 @@ import json
 import matplotlib.pyplot as plt
 from datetime import datetime
 from tqdm import tqdm
-from .Optimizers import Optimizer, MPGA, PSO, SA, SGA
-from .LombAnalysis import LombAnalysis
-from .LPPL import LPPL
-
+from datetime import datetime
+from .Optimizers import MPGA, PSO, SGA, SA
+from GQLib.Optimizers import Optimizer
+from GQLib.LombAnalysis import LombAnalysis
+from GQLib.Models import LPPL, LPPLS
 
 class Framework:
     """
@@ -84,7 +85,8 @@ class Framework:
 
         return data
 
-    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> dict:
+
+    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
 
@@ -102,10 +104,9 @@ class Framework:
             Optimization results for each subinterval.
         """
         optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
-        # PARAM_BOUNDS = self.load_params(self.frequency, optimizer.__class__.__name__)
-        # optimizer.PARAM_BOUNDS = PARAM_BOUNDS # Set parameter bounds for optimizer
         # Select data sample
         sample = self.select_sample(self.data, time_start, time_end) 
+
         # Generate subintervals
         subintervals = self.generate_subintervals(self.frequency, sample)
 
@@ -114,7 +115,7 @@ class Framework:
 
         # Optimize parameters for each subinterval
         for (sub_start, sub_end, sub_data) in tqdm(subintervals, desc="Processing subintervals", unit="subinterval"):
-            # optimizer = optimizer_class(self.frequency)
+            
             bestObjV, bestParams = optimizer.fit(sub_start, sub_end, sub_data)
             results.append({
                 "sub_start": sub_start,
@@ -130,7 +131,8 @@ class Framework:
                 use_package: bool = False,
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
-                show: bool = False) -> dict:
+                show: bool = False,
+                lppl_model: 'LPPL | LPPLS' = LPPL) -> dict:
         """
         Analyze results using Lomb-Scargle periodogram and identify significant critical times.
 
@@ -169,13 +171,13 @@ class Framework:
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
         for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
-            tc, omega, phi, alpha = res["bestParams"]
+
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(LPPL(t_sub, y_sub, tc, omega, phi, alpha))
+            lomb = LombAnalysis(lppl_model(t_sub, y_sub, res["bestParams"]))
             lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
@@ -207,25 +209,32 @@ class Framework:
         if show:
             plt.tight_layout()
             plt.show()
-        
+
         return best_results
 
-    
-
-    def show_lppl(self, lppl: LPPL, ax=None, show: bool = False) -> None:
+    def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
         """
-        Visualize the LPPL fit alongside observed data.
+        Visualize the LPPL or LPPLS fit alongside observed data.
 
         Parameters
         ----------
-        lppl : LPPL
-            An instance of the LPPL model with fitted parameters.
+        lppl : LPPL or LPPLS
+            An instance of the LPPL or LPPLS model with fitted parameters.
         ax : matplotlib.axes.Axes, optional
             An axis to plot on. If None, creates a new figure.
         show : bool, optional
             Whether to display the plot immediately. Default is False.
         """
-        extended_t = np.arange(lppl.t[0], round(lppl.tc) + 1000)
+
+        length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
+
+        # Calculate the maximum available length
+        max_length = len(self.global_prices)
+
+        # Adjust length_extended so it does not exceed the available length
+        length_extended = min(length_extended, max_length)
+
+        extended_t = np.arange(lppl.t[0], length_extended)
         extended_y = self.global_prices[int(extended_t[0]):int(extended_t[-1] + 1)]
         extended_dates = self.global_dates[int(extended_t[0]):int(extended_t[-1] + 1)]
         end_date = self.global_dates[int(lppl.t[-1])]
@@ -340,36 +349,6 @@ class Framework:
                 self.visualize(best_results, optimizer.__class__.__name__)
 
     @staticmethod
-    def select_sample(data : np.asarray, time_start: str, time_end: str) -> np.ndarray:
-        """
-        Select a sample from the global time series based on a user-defined date range.
-
-        Parameters
-        ----------
-        data : np.ndarray
-            The global dataset as a NumPy array with columns: time index, date, and price.
-        time_start : str
-            The start date for the selection in the format "%d/%m/%Y".
-        time_end : str
-            The end date for the selection in the format "%d/%m/%Y".
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (M, 2), where:
-            - Column 0: Numeric time indices (float).
-            - Column 1: Prices (float).
-        """
-        # Convert start and end dates to datetime64
-        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
-        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
-
-        # Filter rows within the specified date range
-        mask = (data[:, 1] >= start_dt) & (data[:, 1] <= end_dt)
-        sample = data[mask]
-
-        return sample[:, [0, 2]].astype(float)
-    
-    @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
         """
         Generate subintervals based on the frequency and pseudo-code logic.
@@ -410,7 +389,37 @@ class Framework:
                 if len(sub_sample) > 0:
                     subintervals.append((sub_st, sub_end, sub_sample))
         return subintervals
-    
+
+    @staticmethod
+    def select_sample(data : np.asarray, time_start: str, time_end: str) -> np.ndarray:
+        """
+        Select a sample from the global time series based on a user-defined date range.
+
+        Parameters
+        ----------
+        data : np.ndarray
+            The global dataset as a NumPy array with columns: time index, date, and price.
+        time_start : str
+            The start date for the selection in the format "%d/%m/%Y".
+        time_end : str
+            The end date for the selection in the format "%d/%m/%Y".
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (M, 2), where:
+            - Column 0: Numeric time indices (float).
+            - Column 1: Prices (float).
+        """
+        # Convert start and end dates to datetime64
+        start_dt = np.datetime64(pd.to_datetime(time_start, format="%d/%m/%Y"))
+        end_dt = np.datetime64(pd.to_datetime(time_end, format="%d/%m/%Y"))
+
+        # Filter rows within the specified date range
+        mask = (data[:, 1] >= start_dt) & (data[:, 1] <= end_dt)
+        sample = data[mask]
+
+        return sample[:, [0, 2]].astype(float)
+
     @staticmethod
     def save_results(results: dict, file_name: str) -> None:
         """
