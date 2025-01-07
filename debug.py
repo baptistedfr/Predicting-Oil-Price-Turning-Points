@@ -26,6 +26,6 @@ for optimizer in optimizers:
         # Sauvegarder les résultats
         fw.save_results(results, filename)
         # On check la significativité des résultats
-        best_results = fw.analyze(results)
+        best_results = fw.analyze(results, lppl_model=LPPLS)
         # On peut visualiser les résultats finaux
         fw.visualize(best_results)

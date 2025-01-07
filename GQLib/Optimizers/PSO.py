@@ -2,7 +2,7 @@ from typing import Tuple
 import numpy as np
 from GQLib.Models import LPPL, LPPLS
 import json
-from .abstract_optimizers import Optimizer
+from .abstract_optimizer import Optimizer
 from ..njitFunc import (
     njit_update_position,
     njit_update_velocity
@@ -76,7 +76,6 @@ class PSO(Optimizer):
             param_bounds = self.convert_param_bounds_lppls(end)
         else:
             raise ValueError("Invalid model type.")
-        self.fitness_history = []
         self.fitness_history = []
         # Initialize particles with initial fitness values
         particles = [
@@ -187,9 +186,9 @@ class Particle():
         fit = self.lppl_model.numba_RSS(self.position, data)
 
         # Update the particle best position and best fitness associated
-        if self.fitness < self.local_best_fitness:
+        if fit < self.local_best_fitness:
             self.local_best_position = self.position
-            self.local_best_fitness = self.fitness
+            self.local_best_fitness = fit
             
     def update_position(self, global_best_position: np.ndarray, data: np.ndarray):
         """

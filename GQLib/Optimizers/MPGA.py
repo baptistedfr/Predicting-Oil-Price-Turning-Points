@@ -1,10 +1,18 @@
-from GQLib.njitFunc import njit_immigration_operation
-from .abstract_optimizer import GeneticAlgorithm
-from GQLib.Models import LPPL, LPPLS
+
 from typing import Tuple
 import numpy as np
 import json
-
+from ..Models import LPPL, LPPLS
+from .abstract_optimizer import Optimizer, GeneticAlgorithm
+from ..Models import LPPL, LPPLS
+from GQLib.njitFunc import (
+    njit_calculate_fitness,
+    njit_selection,
+    njit_crossover,
+    njit_mutate,
+    njit_initialize_population,
+    njit_immigration_operation
+)
 
 class MPGA(GeneticAlgorithm):
     """
@@ -50,11 +58,7 @@ class MPGA(GeneticAlgorithm):
             param_bounds = self.convert_param_bounds_lppl(end)
         elif self.lppl_model == LPPLS:
             param_bounds = self.convert_param_bounds_lppls(end)
-        else:
-            raise ValueError("Invalid model type.")
-        
         self.fitness_history = [[] for _ in range(self.NUM_POPULATIONS)]
-
         # Generate random probabilities for crossover and mutation
         crossover_prob = np.random.uniform(0.001, 0.05, size=self.NUM_POPULATIONS)
         mutation_prob = np.random.uniform(0.001, 0.05, size=self.NUM_POPULATIONS)
@@ -145,3 +149,5 @@ class MPGA(GeneticAlgorithm):
             Updated populations after immigration.
         """
         return njit_immigration_operation(populations, fitness_values)
+
+    

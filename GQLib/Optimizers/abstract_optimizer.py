@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
 import numpy as np
+import plotly.graph_objects as go
+import json
 from GQLib.njitFunc import (
     njit_calculate_fitness,
     njit_selection,
@@ -8,9 +10,8 @@ from GQLib.njitFunc import (
     njit_mutate,
     njit_initialize_population,
 )
-import plotly.graph_objects as go
-import json
 from ..Models import LPPL, LPPLS
+
 class Optimizer(ABC):
     """
     Abstract base class for optimizers.
@@ -46,26 +47,6 @@ class Optimizer(ABC):
         self.fitness_history = []
         pass
 
-    def convert_param_bounds_lppl(self, end: float) -> np.ndarray:
-        """
-        Convert parameter bounds to a NumPy array format.
-
-        Parameters
-        ----------
-        end : float
-            The end time of the subinterval.
-
-        Returns
-        -------
-        np.ndarray
-            A 2D array of shape (4, 2) representing the bounds for each parameter.
-        """
-        return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
-            [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
-            [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
-            [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
-        ], dtype=np.float64)
     
     def visualize_convergence(self):
         """
@@ -147,6 +128,27 @@ class Optimizer(ABC):
         return np.array([
             [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
             [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
+            [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
+        ], dtype=np.float64)
+    
+    def convert_param_bounds_lppl(self, end: float) -> np.ndarray:
+        """
+        Convert parameter bounds to a NumPy array format.
+
+        Parameters
+        ----------
+        end : float
+            The end time of the subinterval.
+
+        Returns
+        -------
+        np.ndarray
+            A 2D array of shape (4, 2) representing the bounds for each parameter.
+        """
+        return np.array([
+            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
+            [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
+            [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
 
