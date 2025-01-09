@@ -203,7 +203,8 @@ class Framework:
                 "sub_end": res["sub_end"],
                 "bestObjV": res["bestObjV"],
                 "bestParams": res["bestParams"],
-                "is_significant": is_significant
+                "is_significant": is_significant,
+                "power_value": max(lomb.power)
             })
 
         if show:
@@ -297,8 +298,14 @@ class Framework:
             if res["sub_end"] > max_time:
                 max_time = res["sub_end"]
             if res["is_significant"]:
-                significant_tc.append(res["bestParams"][0])
+                significant_tc.append([res["bestParams"][0], res["power_value"]])
 
+        try:
+            significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:5]
+            significant_tc = [element[0] for element in significant_tc]
+        except:
+            pass
+        
         plt.figure(figsize=(12, 6))
         plt.plot(filtered_dates, filtered_prices, label="Data", color="black")
         if start_date <= self.global_dates[int(min_time)] <= end_date:
@@ -324,7 +331,7 @@ class Framework:
         plt.legend()
         plt.show()
 
-    def generate_all_dates(self, optimizers : list =  [PSO(), MPGA(), SA(), SGA()]):
+    def generate_all_dates(self, optimizers : list =  [PSO(), MPGA(), SA(), SGA()], save : bool = False):
         dates_sets = {
             "Set 1": ("01/04/2003", "02/01/2008"),
             "Set 2": ("01/02/2007", "01/02/2011"),
@@ -349,8 +356,9 @@ class Framework:
                 start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
                 end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
                 filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
-                # Sauvegarde des résultats au format JSON dans le fichier généré
-                self.save_results(results, filename)
+                if save:
+                    # Sauvegarde des résultats au format JSON dans le fichier généré
+                    self.save_results(results, filename)
                 # Verification de la significativité des résultats
                 best_results = self.analyze(results)
                 # Visualisation des résultats finaux
