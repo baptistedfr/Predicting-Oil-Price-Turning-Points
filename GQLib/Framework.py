@@ -208,7 +208,8 @@ class Framework:
                 "sub_end": res["sub_end"],
                 "bestObjV": res["bestObjV"],
                 "bestParams": res["bestParams"],
-                "is_significant": is_significant
+                "is_significant": is_significant,
+                "power_value": max(lomb.power)
             })
 
         if show:
@@ -287,14 +288,18 @@ class Framework:
             if res["sub_end"] > max_time:
                 max_time = res["sub_end"]
             if res["is_significant"]:
-                significant_tc.append(res["bestParams"][0])
+                significant_tc.append([res["bestParams"][0], res["power_value"]])
 
         plt.figure(figsize=(12, 6))
         plt.plot(self.global_dates, self.global_prices, label="Data", color="black")
         plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
         plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
-        for tc in significant_tc:
+
+        # Garde les 15 plus significatifs
+        significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:15]
+
+        for tc, _ in significant_tc:
             if tc < (len(self.global_dates) - 1):
                 plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
 

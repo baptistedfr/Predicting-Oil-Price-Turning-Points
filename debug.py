@@ -4,10 +4,10 @@ from datetime import datetime
 from GQLib.Models import LPPL, LPPLS
 
 freq = "daily"
-model = LPPLS
+model = LPPL
 
 fw = Framework(freq, model)
-optimizers = [NELDER_MEAD]
+optimizers = [MCMC]
 dates_sets = {
     "Set 1": ("01/04/2003", "02/01/2008"),
     "Set 2": ("01/02/2007", "01/02/2011"),

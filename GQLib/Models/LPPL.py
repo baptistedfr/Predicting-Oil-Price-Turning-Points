@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.interpolate import interp1d
 from matplotlib import pyplot as plt
 from ..njitFunc import njit_RSS_LPPL
 
@@ -156,6 +157,53 @@ class LPPL:
         """
         self.compute_residuals(True)
         return np.sum(self.residuals ** 2)
+    
+
+    def hq_analysis(self, H=1.0, q=0.9):
+        """
+        Compute the (H, q)-analysis derivative:
+        
+            D^H_q f(x) = [ f(x) - f(q * x) ] / ( (1 - q) * x )^H
+
+        where f(x) = ln(price) and x = t - tc.
+
+        Parameters
+        ----------
+        H : float, optional
+            The exponent in the (H, q)-analysis. Default is 1.0.
+        q : float, optional
+            The scale parameter in (H, q)-analysis, must be in (0,1). Default is 0.9.
+
+        Returns
+        -------
+        x_valid : np.ndarray
+            The array of valid x = t - tc (strictly positive).
+        hq_values : np.ndarray
+            The array of (H, q)-derivatives corresponding to x_valid.
+        """
+
+        dt = np.abs(self.tc - self.t)
+        f = dt ** self.alpha
+        f_q = (q * dt) ** self.alpha
+        g = f * np.cos(self.omega * np.log((q * dt)) + self.phi)
+        g_q = f * np.cos(self.omega * np.log((q * dt)) + self.phi)
+
+        # Build design matrix
+        V = np.column_stack((np.ones_like(f), f, g))
+        # Attempt to invert (V^T V)
+
+        params = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
+        A, B, C = params[0], params[1], params[2]
+
+        V_q = np.column_stack((np.ones_like(f_q), f_q, g_q))
+
+        params_q = np.linalg.inv(V_q.T @ V_q) @ (V_q.T @ self.y)
+        A_q, B_q, C_q = params_q[0], params_q[1], params_q[2]
+        
+        predicted = A + B*f + C*g
+        predicted_q = A_q + B_q*f_q + C_q*g_q
+        
+        return (predicted - q * predicted) / ((1 - q) * dt)**H
     
     @staticmethod
     def numba_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:

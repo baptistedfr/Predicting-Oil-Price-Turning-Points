@@ -67,8 +67,9 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
-        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        #ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        #ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.plot(self.new_t, self.lppl.hq_analysis(), label="Residuals with Oscillation (HQ)", color="green")
         ax.set_xlabel("Time (ln(tc - t))")
         ax.set_ylabel("Residuals")
         ax.set_title("LPPL Residuals")
@@ -207,7 +208,7 @@ class LombAnalysis:
                       show: bool = False,
                       use_filtered: bool = False,
                       show_threshold: bool = False,
-                      show_max_power: bool = False,
+                      show_max_power: bool = True,
                       highlight_freq: bool = False) -> None:
         """
         Visualize the Lomb-Scargle power spectrum.
@@ -269,7 +270,7 @@ class LombAnalysis:
         if show_max_power:
             idx_peak = np.argmax(power_plot)
             best_freq = freqs_plot[idx_peak]
-            ax.axvline(x=best_freq, color="orange", linestyle="--", label="Max Power")
+            ax.axvline(x=best_freq, color="orange", linestyle="--", label=f"Max Power={max(power_plot):.1f}, Len={len(self.new_t):.1f}, Ratio={max(power_plot)/len(self.new_t):.4f}")
             
 
         ax.legend()

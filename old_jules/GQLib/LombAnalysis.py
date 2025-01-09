@@ -76,8 +76,11 @@ class LombAnalysis:
         with open('residuals.json', 'w') as f:
             json.dump(test_list, f)
 
+        _, test = self.lppl.hq_analysis()
+
         ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
         ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.plot(self.new_t, test, label="Hq Analysis", color="green")
         ax.set_xlabel("Time (ln(tc - t))")
         ax.set_ylabel("Residuals")
         ax.set_title("LPPL Residuals")
