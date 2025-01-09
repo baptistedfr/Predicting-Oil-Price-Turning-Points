@@ -161,12 +161,10 @@ class MCMC(Optimizer):
                     name=f'Parameter {param_names[i]}'
                 )
             )
-            # Update layout with titles and spacing
             fig.update_layout(
                 title="Evolution of Parameters Over Iterations",
                 xaxis_title="Iterations",
                 yaxis_title="Parameter Values",
                 showlegend=True,
             )
-            # Show the plot
             fig.show()
