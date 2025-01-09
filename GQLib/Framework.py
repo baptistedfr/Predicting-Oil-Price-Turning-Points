@@ -330,10 +330,18 @@ class Framework:
             "Set 2": ("01/02/2007", "01/02/2011"),
             "Set 3": ("29/04/2011", "01/08/2015"),
         }
+        dates_graphs = [
+        ("01/10/2003", "31/12/2009"),
+        ("01/12/2008", "31/12/2011"),
+        ("01/11/2011", "31/12/2016"),
+        ]
+        
         print(f"FREQUENCY : {self.frequency}")
         for optimizer in optimizers:
+            current = 0
             print(f"Running process for {optimizer.__class__.__name__}\n")
             for set_name, (start_date, end_date) in dates_sets.items():
+                graph_start_date, graph_end_date = dates_graphs[current]
                 print(f"Running process for {set_name} from {start_date} to {end_date}")
                 # Exécute le processus d'optimisation pour l'intervalle de dates donné
                 results = self.process(start_date, end_date, optimizer)
@@ -346,7 +354,13 @@ class Framework:
                 # Verification de la significativité des résultats
                 best_results = self.analyze(results)
                 # Visualisation des résultats finaux
-                self.visualize(best_results, optimizer.__class__.__name__)
+                self.visualize(
+                best_results,
+                optimizer.__class__.__name__,
+                start_date=graph_start_date,
+                end_date=graph_end_date
+                )
+                current+=1
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
