@@ -1,5 +1,5 @@
 from GQLib.Framework import Framework
-from GQLib.Optimizers import MPGA, PSO, SA, SGA, MCMC, NELDER_MEAD
+from GQLib.Optimizers import *
 from datetime import datetime
 from GQLib.Models import LPPL, LPPLS
 
@@ -7,7 +7,7 @@ freq = "daily"
 model = LPPLS
 
 fw = Framework(freq, model)
-optimizers = [NELDER_MEAD(model)]
+optimizers = [MCMC(model)]
 dates_sets = {
     "Set 1": ("01/04/2003", "02/01/2008"),
     "Set 2": ("01/02/2007", "01/02/2011"),
@@ -28,4 +28,4 @@ for optimizer in optimizers:
         # On check la significativité des résultats
         best_results = fw.analyze(results, lppl_model=LPPLS)
         # On peut visualiser les résultats finaux
-        fw.visualize(best_results)
+        fw.visualize(best_results,optimizer.__class__.__name__)
