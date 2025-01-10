@@ -260,7 +260,8 @@ class Framework:
         if show:
             plt.show()
 
-    def visualize(self, best_results : dict, name = "", start_date: str = None, end_date: str = None, nb_tc : int = None) -> None:
+    def visualize(self, best_results : dict, name = "", data_name: str = "",
+                  start_date: str = None, end_date: str = None, nb_tc : int = None) -> None:
         """
         Visualize significant critical times on the price series.
         Permet de filtrer et d'afficher les résultats pour une plage de dates spécifique.
@@ -295,6 +296,10 @@ class Framework:
         filtered_dates = [self.global_dates[i] for i in filtered_indices]
         filtered_prices = [self.global_prices[i] for i in filtered_indices]
 
+        fig = go.Figure()
+        # Plot de la série de prix
+        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name))
+
         for res in best_results:
             if res["sub_start"] < min_time:
                 min_time = res["sub_start"]
@@ -302,6 +307,16 @@ class Framework:
                 max_time = res["sub_end"]
             if res["is_significant"]:
                 significant_tc.append([res["bestParams"][0], res["power_value"]])
+
+        if start_date <= self.global_dates[int(min_time)] <= end_date:
+            fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
+                                     y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                                     line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
+
+        if start_date <= self.global_dates[int(max_time)] <= end_date:
+            fig.add_trace(go.Scatter(x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
+                                     y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                                     line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
         try:
             if (nb_tc!=None):
@@ -311,165 +326,27 @@ class Framework:
                 significant_tc = [element[0] for element in significant_tc]
         except:
             pass
-        
-        plt.figure(figsize=(12, 6))
-        plt.plot(filtered_dates, filtered_prices, label="Data", color="black")
-        if start_date <= self.global_dates[int(min_time)] <= end_date:
-            plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
-        if start_date <= self.global_dates[int(max_time)] <= end_date:
-            plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
-        # plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
-        # plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
-        # for tc in significant_tc:
-        #     plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
+        index_plot = 0
         for tc in significant_tc:
             try:
                 date_tc = self.global_dates[int(round(tc))]
                 if start_date <= date_tc <= end_date:
-                    plt.axvline(x=date_tc, color="red", linestyle=":")
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[date_tc, date_tc],
+                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                            mode="lines",
+                            line=dict(color="red", dash="dot"),
+                            name=f"Critical times" if index_plot == 0 else None,
+                            showlegend=(index_plot == 0)
+                        )
+                    )
+                    index_plot += 1
             except:
                 continue
             
-        plt.title(name)
-        plt.xlabel("Date")
-        plt.ylabel("Price")
-        plt.legend()
-        plt.show()
-
-    def compare_results(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
-                        real_tc: str = None, start_date: str = None, end_date: str = None):
-        """
-        Visualize multiple run results
-
-        Parameters
-        ----------
-        multiple_results (list[dict]) : list of each run results
-        """
-        colors = [
-            "#ffa15a",  # Orange clair
-            "#ab63fa",  # Violet clair
-            "#00cc96",  # Vert clair
-            "#ef553b",  # Rouge clair
-            "#636efa",  # Bleu clair
-            "#19d3f3",  # Cyan
-            "#ff6692",  # Rose clair
-            "#b6e880",  # Vert lime
-            "#ff97ff",  # Magenta clair
-        ]
-        if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1 * 365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5 * 365)
-        else:
-            start_date = self.global_dates.min()
-            end_date = self.global_dates.max()
-
-        filtered_indices = [i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date]
-        if not filtered_indices:
-            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
-            return
-
-        filtered_dates = [self.global_dates[i] for i in filtered_indices]
-        filtered_prices = [self.global_prices[i] for i in filtered_indices]
-
-        fig = go.Figure()
-        # Plot de la série de prix
-        fig.add_trace(
-            go.Scatter(
-                x=filtered_dates,
-                y=filtered_prices,
-                mode='lines',
-                name=data_name
-            )
-        )
-        # Si la vraie date du tc est fournie, on la plot
-        if real_tc is not None:
-            target_date = pd.to_datetime(real_tc, format="%d/%m/%Y")
-
-            for entry in self.data:
-                if entry[1] == target_date:
-                    time_tc = entry[0]
-
-            if time_tc:
-                fig.add_trace(
-                    go.Scatter(
-                        x=[self.global_dates[int(time_tc)], self.global_dates[int(time_tc)]],
-                        y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                        mode="lines",
-                        line=dict(color="red", width=4),
-                        textfont=dict(weight='bold'),
-                        name="Real critical time",
-                        showlegend=True,
-                        opacity=1
-                    )
-                )
-
-        # Pour chaque modèle, on plot les tc
-        for i, model in enumerate(multiple_results.keys()):
-            best_results = multiple_results[model]
-            significant_tc = []
-            min_time = np.inf
-            max_time = -np.inf
-
-            for res in best_results:
-                if res["sub_start"] < min_time:
-                    min_time = res["sub_start"]
-                if res["sub_end"] > max_time:
-                    max_time = res["sub_end"]
-                if res["is_significant"]:
-                    significant_tc.append(res["bestParams"][0])
-
-            # On plot les start et end date une fois à la première itération
-            if i == 0:
-                if start_date <= self.global_dates[int(min_time)] <= end_date:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                            mode="lines",
-                            line=dict(color="gray", dash="dash"),
-                            name="Start Date",
-                            showlegend=True
-                        )
-                    )
-
-                if start_date <= self.global_dates[int(max_time)] <= end_date:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                            mode="lines",
-                            line=dict(color="gray", dash="longdash"),
-                            name="End Date",
-                            showlegend=True
-                        )
-                    )
-
-            index_plot = 0
-            for tc in significant_tc:
-                try:
-                    date_tc = self.global_dates[int(round(tc))]
-                    if start_date <= date_tc <= end_date:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=[date_tc, date_tc],
-                                y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                                mode="lines",
-                                line=dict(color=colors[i], dash="dot"),
-                                name=f"{model} critical times" if index_plot == 0 else None,
-                                showlegend=(index_plot == 0)
-                            )
-                        )
-                        index_plot += 1
-                except:
-                    continue
-
-        fig.update_layout(
-            title=name,
-            xaxis_title="Date",
-            yaxis_title="Price",
-            showlegend=True,
-        )
+        fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
         fig.show()
 
     def compare_results_rectangle(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
@@ -509,16 +386,8 @@ class Framework:
         filtered_prices = [self.global_prices[i] for i in filtered_indices]
 
         fig = go.Figure()
-
         # Plot de la série de prix
-        fig.add_trace(
-            go.Scatter(
-                x=filtered_dates,
-                y=filtered_prices,
-                mode='lines',
-                name=data_name
-            )
-        )
+        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name))
 
         # Si la vraie date du tc est fournie, on la plot
         if real_tc is not None:
@@ -574,28 +443,14 @@ class Framework:
             # On plot les start et end date une fois à la première itération
             if i == 0:
                 if start_date <= self.global_dates[int(min_time)] <= end_date:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                            mode="lines",
-                            line=dict(color="gray", dash="dash"),
-                            name="Start Date",
-                            showlegend=True
-                        )
-                    )
+                    fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
+                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                            line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
 
                 if start_date <= self.global_dates[int(max_time)] <= end_date:
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                            mode="lines",
-                            line=dict(color="gray", dash="longdash"),
-                            name="End Date",
-                            showlegend=True
-                        )
-                    )
+                    fig.add_trace(go.Scatter( x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
+                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                            line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
             if significant_tc and nb_tc == 1:
                 print(f"Model : {model}")
@@ -605,40 +460,19 @@ class Framework:
                 print(max_tc_date)
 
                 # Rectangle pour le modèle
-                fig.add_trace(
-                    go.Scatter(
-                        x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
+                fig.add_trace(go.Scatter(x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
                         y=[base_y + i * rectangle_height, base_y + i * rectangle_height,
                            base_y + (i + 1) * rectangle_height,
                            base_y + (i + 1) * rectangle_height, base_y + i * rectangle_height],
-                        fill="toself",
-                        fillcolor=colors[i % len(colors)],
-                        line=dict(color=colors[i % len(colors)], width=1),
-                        name=f"{model} critical time",
-                        opacity=0.5,
-                        showlegend=False
-                    )
-                )
+                        fill="toself", fillcolor=colors[i % len(colors)], opacity=0.5, showlegend=False,
+                        line=dict(color=colors[i % len(colors)], width=1), name=f"{model} critical time"))
 
                 # Ajout du nom du modèle au centre du rectangle
                 center_x = min_tc_date + (max_tc_date - min_tc_date) / 2
                 center_y = base_y + i * rectangle_height + rectangle_height / 2
-                fig.add_trace(
-                    go.Scatter(
-                        x=[center_x],
-                        y=[center_y],
-                        text=[model],
-                        mode="text",
-                        showlegend=False
-                    )
-                )
+                fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[model],mode="text",showlegend=False))
 
-        fig.update_layout(
-            title=name,
-            xaxis_title="Date",
-            yaxis_title="Price",
-            showlegend=True
-        )
+        fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
         fig.show()
 
     def generate_all_dates(self, optimizers : list =  [SA(), SGA(), PSO(), MPGA()], 
