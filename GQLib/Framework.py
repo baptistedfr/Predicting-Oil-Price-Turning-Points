@@ -492,6 +492,164 @@ class Framework:
         )
         fig.show()
 
+    def compare_results_rectangle(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
+                                  real_tc: str = None, start_date: str = None, end_date: str = None):
+        """
+        Visualize multiple run results
+
+        Parameters
+        ----------
+        multiple_results (dict[str, dict]): Dict of each model's results
+        """
+        colors = [
+            "#ffa15a",  # Orange clair
+            "#ab63fa",  # Violet clair
+            "#00cc96",  # Vert clair
+            "#ef553b",  # Rouge clair
+            "#636efa",  # Bleu clair
+            "#19d3f3",  # Cyan
+            "#ff6692",  # Rose clair
+            "#b6e880",  # Vert lime
+            "#ff97ff",  # Magenta clair
+        ]
+
+        if start_date is not None and end_date is not None:
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1 * 365)
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5 * 365)
+        else:
+            start_date = self.global_dates.min()
+            end_date = self.global_dates.max()
+
+        filtered_indices = [i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date]
+        if not filtered_indices:
+            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
+            return
+
+        filtered_dates = [self.global_dates[i] for i in filtered_indices]
+        filtered_prices = [self.global_prices[i] for i in filtered_indices]
+
+        fig = go.Figure()
+
+        # Plot de la série de prix
+        fig.add_trace(
+            go.Scatter(
+                x=filtered_dates,
+                y=filtered_prices,
+                mode='lines',
+                name=data_name
+            )
+        )
+
+        # Si la vraie date du tc est fournie, on la plot
+        if real_tc is not None:
+            target_date = pd.to_datetime(real_tc, format="%d/%m/%Y")
+
+            for entry in self.data:
+                if entry[1] == target_date:
+                    time_tc = entry[0]
+
+            if time_tc:
+                fig.add_trace(
+                    go.Scatter(
+                        x=[self.global_dates[int(time_tc)], self.global_dates[int(time_tc)]],
+                        y=[min(filtered_prices)-10, max(filtered_prices)+10],
+                        mode="lines",
+                        line=dict(color="red", width=4),
+                        name="Real critical time",
+                        showlegend=True
+                    )
+                )
+
+        # Je veux garder 1/5 du max de la time series en haut et en bas
+        total_height = int(max(filtered_prices))
+        base_y = total_height / 5
+        remaining_height = total_height - 2 * base_y
+
+        # On divise l'espace en restant pour que chaque model ait la même hauteur
+        rectangle_height = remaining_height / len(multiple_results.keys())
+
+        for i, model in enumerate(multiple_results.keys()):
+            best_results = multiple_results[model]
+            significant_tc = []
+            min_time = np.inf
+            max_time = -np.inf
+
+            for res in best_results:
+                if res["sub_start"] < min_time:
+                    min_time = res["sub_start"]
+                if res["sub_end"] > max_time:
+                    max_time = res["sub_end"]
+                if res["is_significant"]:
+                    significant_tc.append(res["bestParams"][0])
+
+            # On plot les start et end date une fois à la première itération
+            if i == 0:
+                if start_date <= self.global_dates[int(min_time)] <= end_date:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
+                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                            mode="lines",
+                            line=dict(color="gray", dash="dash"),
+                            name="Start Date",
+                            showlegend=True
+                        )
+                    )
+
+                if start_date <= self.global_dates[int(max_time)] <= end_date:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
+                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                            mode="lines",
+                            line=dict(color="gray", dash="longdash"),
+                            name="End Date",
+                            showlegend=True
+                        )
+                    )
+
+            if significant_tc:
+                min_tc_date = self.global_dates[int(round(min(significant_tc)))]
+                max_tc_date = self.global_dates[int(round(max(significant_tc)))]
+
+                # Rectangle pour le modèle
+                fig.add_trace(
+                    go.Scatter(
+                        x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
+                        y=[base_y + i * rectangle_height, base_y + i * rectangle_height,
+                           base_y + (i + 1) * rectangle_height,
+                           base_y + (i + 1) * rectangle_height, base_y + i * rectangle_height],
+                        fill="toself",
+                        fillcolor=colors[i % len(colors)],
+                        line=dict(color=colors[i % len(colors)], width=1),
+                        name=f"{model} critical time",
+                        opacity=0.5,
+                        showlegend=False
+                    )
+                )
+
+                # Ajout du nom du modèle au centre du rectangle
+                center_x = min_tc_date + (max_tc_date - min_tc_date) / 2
+                center_y = base_y + i * rectangle_height + rectangle_height / 2
+                fig.add_trace(
+                    go.Scatter(
+                        x=[center_x],
+                        y=[center_y],
+                        text=[model],
+                        mode="text",
+                        showlegend=False
+                    )
+                )
+
+        fig.update_layout(
+            title=name,
+            xaxis_title="Date",
+            yaxis_title="Price",
+            showlegend=True
+        )
+        fig.show()
+
+
     def generate_all_dates(self, optimizers : list =  [PSO(), MPGA(), SA(), SGA()]):
         dates_sets = {
             "Set 1": ("01/04/2003", "02/01/2008"),
