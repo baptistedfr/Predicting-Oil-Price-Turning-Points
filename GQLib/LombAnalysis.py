@@ -177,7 +177,7 @@ class LombAnalysis:
 
         return self.filtered_freqs, self.filtered_power
     
-    def check_significance(self) -> bool:
+    def check_significance(self, significativity_tc : float = 0.3) -> bool:
         """
         Check if the target frequency is statistically significant.
 
@@ -201,7 +201,7 @@ class LombAnalysis:
             raise RuntimeError("No filtered results found. Call filter_results() first.")
 
         idx = np.argmax(self.filtered_power)
-        return abs(self.filtered_freqs[idx] - self.target_freq) < 0.3
+        return abs(self.filtered_freqs[idx] - self.target_freq) < significativity_tc
         
 
     def show_residuals(self, ax=None, show: bool = False) -> None:
