@@ -1,6 +1,8 @@
 import numpy as np
 from numba import njit
 from typing import TYPE_CHECKING
+import warnings
+warnings.filterwarnings("ignore")
 
 if TYPE_CHECKING:
     from GQLib.Models import LPPL, LPPLS

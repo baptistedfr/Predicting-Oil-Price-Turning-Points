@@ -20,7 +20,7 @@ class Optimizer(ABC):
     """
 
     PARAM_BOUNDS = None
-
+    lppl_model = None
     @abstractmethod
     def __init__(self) -> None:
         pass
