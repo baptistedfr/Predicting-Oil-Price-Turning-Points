@@ -23,7 +23,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", is_uso : bool = False) -> None:
+    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -42,7 +42,7 @@ class Framework:
         if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
-
+        self.lppl_model = lppl_model
         self.data = self.load_data(is_uso)
 
         self.global_times = self.data[:, 0].astype(float)
@@ -106,6 +106,7 @@ class Framework:
             Optimization results for each subinterval.
         """
         optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
+        optimizer.lppl_model = self.lppl_model #On force le LPPL 
         # Select data sample
         sample = self.select_sample(self.data, time_start, time_end) 
 
@@ -134,7 +135,6 @@ class Framework:
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
                 show: bool = False,
-                lppl_model: 'LPPL | LPPLS' = LPPL,
                 significativity_tc : float = 0.3) -> dict:
         """
         Analyze results using Lomb-Scargle periodogram and identify significant critical times.
@@ -173,14 +173,14 @@ class Framework:
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
-        for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
-
+        # for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
+        for idx, res in enumerate(results):
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(lppl_model(t_sub, y_sub, res["bestParams"]))
+            lomb = LombAnalysis(self.lppl_model(t_sub, y_sub, res["bestParams"]))
             lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance(significativity_tc=significativity_tc)
@@ -371,8 +371,8 @@ class Framework:
         ]
 
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1 * 365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=3 * 365)
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=2 * 365)
         else:
             start_date = self.global_dates.min()
             end_date = self.global_dates.max()
@@ -502,7 +502,8 @@ class Framework:
                 # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
                 start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
                 end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
-                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{self.lppl_model.__name__}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+               
                 if save:
                     # Sauvegarde des résultats au format JSON dans le fichier généré
                     self.save_results(results, filename)
@@ -541,8 +542,8 @@ class Framework:
                 # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
                 start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
                 end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
-                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
-
+                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{self.lppl_model.__name__}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+               
                 if rerun:
                     print(f"Running process for {optimizer.__class__.__name__}\n")
                     results = self.process(start_date, end_date, optimizer)

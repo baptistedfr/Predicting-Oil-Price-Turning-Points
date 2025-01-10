@@ -9,7 +9,7 @@ from .abstract_optimizer import Optimizer
 
 class NELDER_MEAD(Optimizer):
 
-    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPLS) -> None:
+    def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
 
         self.lppl_model = lppl_model
         self.NUM_POPULATIONS = None
