@@ -151,8 +151,7 @@ class Framework:
             Threshold for filtering frequencies close to the most probable frequency. Default is 1e-3.
         show : bool, optional
             Whether to display visualizations of the Lomb spectrum and LPPL fits. Default is False.
-        lppl_model : (LPPL | LPPLS)
-            An instance of the LPPL or LPPLS model with fitted parameters.
+
         Returns
         -------
         dict
@@ -276,6 +275,26 @@ class Framework:
         min_time = np.inf
         max_time = -np.inf
 
+        if start_date is not None:
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+        else:
+            start_date = self.global_dates.min()
+        
+        if end_date is not None:
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+        else:
+            end_date = self.global_dates.max()
+
+        filtered_indices = [
+            i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date
+        ]
+        if not filtered_indices:
+            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
+            return
+        
+        filtered_dates = [self.global_dates[i] for i in filtered_indices]
+        filtered_prices = [self.global_prices[i] for i in filtered_indices]
+
         for res in best_results:
             if res["sub_start"] < min_time:
                 min_time = res["sub_start"]
@@ -284,82 +303,41 @@ class Framework:
             if res["is_significant"]:
                 significant_tc.append([res["bestParams"][0], res["power_value"]])
 
-        if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=5*365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5*365)
-        else:
-            start_date = self.global_dates.min()
-            end_date = self.global_dates.max()
-
-        filtered_indices = [i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date]
-        if not filtered_indices:
-            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
-            return
-
-        filtered_dates = [self.global_dates[i] for i in filtered_indices]
-        filtered_prices = [self.global_prices[i] for i in filtered_indices]
-
-        fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(
-                x=filtered_dates,
-                y=filtered_prices,
-                mode='lines',
-                name='Data'
-                # line=dict(color='black')
-            )
-        )
+        try:
+            if (nb_tc!=None):
+                significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:nb_tc]
+                significant_tc = [element[0] for element in significant_tc]
+            else:
+                significant_tc = [element[0] for element in significant_tc]
+        except:
+            pass
+        
+        plt.figure(figsize=(12, 6))
+        plt.plot(filtered_dates, filtered_prices, label="Data", color="black")
         if start_date <= self.global_dates[int(min_time)] <= end_date:
-            fig.add_trace(
-                go.Scatter(
-                    x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                    mode="lines",
-                    line=dict(color="gray", dash="dash"),
-                    name="Start Date",
-                    showlegend=True
-                )
-            )
-
+            plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
         if start_date <= self.global_dates[int(max_time)] <= end_date:
-            fig.add_trace(
-                go.Scatter(
-                    x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                    mode="lines",
-                    line=dict(color="gray", dash="longdash"),
-                    name="End Date",
-                    showlegend=True
-                )
-            )
+            plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
+        # plt.axvline(x=self.global_dates[int(min_time)], color="gray", linestyle="--", label="Start Date")
+        # plt.axvline(x=self.global_dates[int(max_time)], color="gray", linestyle="--", label="End Date")
 
-        # Ajout des temps critiques (Critical Time)
-        for idx, tc in enumerate(significant_tc):
+        # for tc in significant_tc:
+        #     plt.axvline(x=self.global_dates[int(round(tc))], color="red", linestyle=":")
+        for tc in significant_tc:
             try:
                 date_tc = self.global_dates[int(round(tc))]
                 if start_date <= date_tc <= end_date:
-                    # Lignes verticales pour les temps critiques
-                    fig.add_trace(
-                        go.Scatter(
-                            x=[date_tc, date_tc],
-                            y=[min(filtered_prices)-10, max(filtered_prices)+10],
-                            mode="lines",
-                            line=dict(color="red", dash="dot"),
-                            name="Critical Time" if idx == 0 else None,  # Légende uniquement pour le premier
-                            showlegend=(idx == 0)
-                        )
-                    )
+                    plt.axvline(x=date_tc, color="red", linestyle=":")
             except:
                 continue
-        fig.update_layout(
-            title=name,
-            xaxis_title="Date",
-            yaxis_title="Price",
-            showlegend=True,
-        )
-        fig.show()
+            
+        plt.title(name)
+        plt.xlabel("Date")
+        plt.ylabel("Price")
+        plt.legend()
+        plt.show()
 
-    def compare_results(self, multiple_results: dict[str, dict], name:str = "", data_name: str = "",
+    def compare_results(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
                         real_tc: str = None, start_date: str = None, end_date: str = None):
         """
         Visualize multiple run results
@@ -380,8 +358,8 @@ class Framework:
             "#ff97ff",  # Magenta clair
         ]
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1*365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5*365)
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1 * 365)
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5 * 365)
         else:
             start_date = self.global_dates.min()
             end_date = self.global_dates.max()
@@ -495,7 +473,7 @@ class Framework:
         fig.show()
 
     def compare_results_rectangle(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
-                                  real_tc: str = None, start_date: str = None, end_date: str = None):
+                                  real_tc: str = None, start_date: str = None, end_date: str = None, nb_tc: int = 1):
         """
         Visualize multiple run results
 
@@ -517,7 +495,7 @@ class Framework:
 
         if start_date is not None and end_date is not None:
             start_date = pd.to_datetime(start_date, format="%d/%m/%Y") - timedelta(days=1 * 365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=5 * 365)
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=3 * 365)
         else:
             start_date = self.global_dates.min()
             end_date = self.global_dates.max()
@@ -554,7 +532,7 @@ class Framework:
                 fig.add_trace(
                     go.Scatter(
                         x=[self.global_dates[int(time_tc)], self.global_dates[int(time_tc)]],
-                        y=[min(filtered_prices)-10, max(filtered_prices)+10],
+                        y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
                         mode="lines",
                         line=dict(color="red", width=4),
                         name="Real critical time",
@@ -582,7 +560,16 @@ class Framework:
                 if res["sub_end"] > max_time:
                     max_time = res["sub_end"]
                 if res["is_significant"]:
-                    significant_tc.append(res["bestParams"][0])
+                    significant_tc.append([res["bestParams"][0], res["power_value"]])
+
+            try:
+                if (nb_tc != None):
+                    significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:nb_tc]
+                    significant_tc = [element[0] for element in significant_tc]
+                else:
+                    significant_tc = [element[0] for element in significant_tc]
+            except:
+                pass
 
             # On plot les start et end date une fois à la première itération
             if i == 0:
@@ -610,9 +597,12 @@ class Framework:
                         )
                     )
 
-            if significant_tc:
-                min_tc_date = self.global_dates[int(round(min(significant_tc)))]
-                max_tc_date = self.global_dates[int(round(max(significant_tc)))]
+            if significant_tc and nb_tc == 1:
+                print(f"Model : {model}")
+                min_tc_date = self.global_dates[int(round(min(significant_tc)))] - timedelta(days=15)
+                max_tc_date = self.global_dates[int(round(max(significant_tc)))] + timedelta(days=15)
+                print(min_tc_date)
+                print(max_tc_date)
 
                 # Rectangle pour le modèle
                 fig.add_trace(
@@ -650,7 +640,6 @@ class Framework:
             showlegend=True
         )
         fig.show()
-
 
     def generate_all_dates(self, optimizers : list =  [SA(), SGA(), PSO(), MPGA()], 
                            nb_tc : int = None, 
@@ -694,6 +683,49 @@ class Framework:
                 nb_tc = nb_tc
                 )
                 current+=1
+
+    def generate_all_rectangle(self, optimizers: list = [SA(), SGA(), PSO(), MPGA()],
+                           significativity_tc=0.3,
+                           rerun: bool = False,
+                           save: bool = False):
+        dates_sets = {
+            "Set 1": ("01/04/2003", "02/01/2008"),
+            "Set 2": ("01/02/2007", "01/02/2011"),
+            "Set 3": ("29/04/2011", "01/08/2015"),
+        }
+
+        real_tcs = ['03/07/2008', '29/04/2011', '11/02/2016']
+
+        print(f"FREQUENCY : {self.frequency}")
+        compteur = 0
+        for set_name, (start_date, end_date) in dates_sets.items():
+            print(f"Running process for {set_name} from {start_date} to {end_date}")
+            best_results_list = {}
+
+            for optimizer in optimizers:
+
+                # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
+                start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
+                end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
+                filename = f"results/{optimizer.__class__.__name__}/{self.frequency}/{start_date_obj.strftime('%m-%Y')} {end_date_obj.strftime('%m-%Y')}.json"
+
+                if rerun:
+                    print(f"Running process for {optimizer.__class__.__name__}\n")
+                    results = self.process(start_date, end_date, optimizer)
+                    best_results_list[optimizer.__class__.__name__] = self.analyze(results=results,
+                                                                                   significativity_tc=significativity_tc)
+                    if save:
+                        self.save_results(results, filename)
+                else:
+                    print(f"Getting result for {optimizer.__class__.__name__}\n")
+                    best_results_list[optimizer.__class__.__name__] = self.analyze(result_json_name=filename,
+                                                                                   significativity_tc=significativity_tc)
+
+            self.compare_results_rectangle(multiple_results=best_results_list, name="Predicted LPPL critical times",
+                                           data_name="WTI Data", real_tc=real_tcs[compteur], start_date=start_date,
+                                           end_date=end_date)
+            compteur += 1
+
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
