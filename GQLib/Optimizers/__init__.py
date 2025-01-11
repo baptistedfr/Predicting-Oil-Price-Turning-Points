@@ -6,4 +6,5 @@ from .SGA import SGA
 from .MCMC import MCMC
 from .NELDER_MEAD import NELDER_MEAD
 from .TABU import TABU
-__all__ = ["Optimizer", "MPGA", "PSO", "SA", "SGA", "MCMC", "NELDER_MEAD", "TABU","GeneticAlgorithm"]
+from .FA import FA
+__all__ = ["Optimizer", "MPGA", "PSO", "SA", "SGA", "MCMC", "NELDER_MEAD", "TABU","FA","GeneticAlgorithm"]

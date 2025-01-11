@@ -69,7 +69,7 @@ class SGA(GeneticAlgorithm):
         population = self.initialize_population(param_bounds, self.POPULATION_SIZE)
 
         # Compute initial fitness values
-        fitness = self.calculate_fitness(population, data)
+        fitness = self.calculate_fitness(population, data, self.lppl_model)
 
         # Determine initial best individual
         bestObjV = np.min(fitness)
@@ -92,7 +92,7 @@ class SGA(GeneticAlgorithm):
             population = mutated
 
             # Recompute fitness values
-            fitness = self.calculate_fitness(population, data)
+            fitness = self.calculate_fitness(population, data, self.lppl_model)
             
             # Determine best individual
             newbestObjV = np.min(fitness)

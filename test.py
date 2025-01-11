@@ -1,18 +1,18 @@
 from GQLib.Framework import Framework
-from GQLib.Optimizers import MPGA, PSO, SGA, SA, NELDER_MEAD, TABU
+from GQLib.Optimizers import MPGA, PSO, SGA, SA, NELDER_MEAD, TABU, FA
 from GQLib.Models import LPPL, LPPLS
 from GQLib.utilities import generate_all_dates, generate_all_rectangle
 
 generate_all_rectangle(frequency = "daily",
                         lppl_model = LPPL,
-                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), FA(), MPGA(), PSO()],
                         significativity_tc=0.3,
                         rerun = True,
                         save=True)
 
 generate_all_rectangle(frequency = "daily",
                         lppl_model = LPPLS,
-                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        optimizers = [SA(LPPLS), SGA(LPPLS), NELDER_MEAD(LPPLS), TABU(LPPLS), MPGA(LPPLS), PSO(LPPLS)],
                         significativity_tc=0.3,
                         rerun = True,
                         save=True)
@@ -26,7 +26,7 @@ generate_all_rectangle(frequency = "weekly",
 
 generate_all_rectangle(frequency = "weekly",
                         lppl_model = LPPLS,
-                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        optimizers = [SA(LPPLS), SGA(LPPLS), NELDER_MEAD(LPPLS), TABU(LPPLS), MPGA(LPPLS), PSO(LPPLS)],
                         significativity_tc=0.3,
                         rerun = True,
                         save=True)
