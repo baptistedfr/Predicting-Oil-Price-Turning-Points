@@ -103,36 +103,30 @@ class SA(Optimizer):
 
         current = 0
         while current <= self.MAX_ITER:
-            # Generate a new candidate solution by sampling within parameter bounds
+            # Generate a new candidate solution by making small perturbations
             for i in range(len(current_solution)):
-                low, high = param_bounds[i]
-                candidate_solution[i] = np.random.uniform(low, high)
+                perturbation = np.random.normal(0, scale=0.1 * (param_bounds[i][1] - param_bounds[i][0]))
+                candidate_solution[i] = np.clip(current_solution[i] + perturbation, *param_bounds[i])
 
             # Evaluate the fitness of the candidate solution
             candidate_fitness = self.lppl_model.numba_RSS(candidate_solution, data)
 
-            # Acceptance probability: Accept better solutions directly, or accept worse ones probabilistically
-            if candidate_fitness < current_fitness:
-                accept = True
-            else:
-                # As the temperature decreases, the probability of accepting worse solutions decreases
-                delta = candidate_fitness - current_fitness
-                accept = random.random() < np.exp(-delta / temperature)
-
-            # If the candidate solution is accepted, update the current solution
-            if accept:
+            # Acceptance probability
+            delta = candidate_fitness - current_fitness
+            if candidate_fitness < current_fitness or random.random() < np.exp(-delta / temperature):
                 current_solution = candidate_solution
                 current_fitness = candidate_fitness
                 self.fitness_history.append(current_fitness)
 
-            # Track the best solution found so far
+            # Track the best solution
             if current_fitness < best_fitness:
                 best_solution = current_solution
                 best_fitness = current_fitness
                 current = 0
 
             current += 1
+
             # Cooling schedule: Gradually reduce the temperature
             temperature *= self.COOLING_RATE
 
-        return best_fitness, best_solution
+        return best_fitness, np.array(best_solution)
