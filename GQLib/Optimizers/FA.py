@@ -95,7 +95,7 @@ class FA(Optimizer):
         best_index = np.argmin(fitness)
         best_fitness = fitness[best_index]
         # Iterate through the generations
-        for generation in range(self.MAX_GEN):
+        for _ in range(self.MAX_GEN):
             for i in range(self.NUM_FIREFLIES):
                 for j in range(self.NUM_FIREFLIES):
                     if fitness[j] < fitness[i]:

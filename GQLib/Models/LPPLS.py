@@ -4,7 +4,7 @@ from ..njitFunc import njit_RSS_LPPLS
 
 class LPPLS:
     """
-    A class to represent the Log-Periodic Power Law (LPPLS) model with 4 linear parameters.
+    A class to represent the Log-Periodic Power Law Simple (LPPLS) model with 4 linear parameters.
 
     Attributes
     ----------
@@ -52,7 +52,7 @@ class LPPLS:
         self.__name__ = "LPPLS"
 
     def __repr__(self):
-        return f"LPPL(t={self.t}, y={self.y}, tc={self.tc}, omega={self.omega}, alpha={self.alpha})"
+        return f"LPPLS(t={self.t}, y={self.y}, tc={self.tc}, omega={self.omega}, alpha={self.alpha})"
 
     def show(self):
         """

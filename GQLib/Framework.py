@@ -350,8 +350,15 @@ class Framework:
         fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
         fig.show()
 
-    def compare_results_rectangle(self, multiple_results: dict[str, dict], name: str = "", data_name: str = "",
-                                  real_tc: str = None, start_date: str = None, end_date: str = None, nb_tc: int = 1):
+    def compare_results_rectangle(self, multiple_results: dict[str, dict], 
+                                  name: str = "", 
+                                  data_name: str = "",
+                                  real_tc: str = None, 
+                                  optimiseurs_models : list = None,
+                                  start_date: str = None, 
+                                  end_date: str = None, 
+                                  nb_tc: int = 20,
+                                  save_plot : bool = False):
         """
         Visualize multiple run results
 
@@ -372,6 +379,8 @@ class Framework:
         ]
         start = start_date
         end = end_date
+
+        name_plot =""
         if start_date is not None and end_date is not None:
             start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
             end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=2 * 365)
@@ -394,22 +403,17 @@ class Framework:
         # Si la vraie date du tc est fournie, on la plot
         if real_tc is not None:
             target_date = pd.to_datetime(real_tc, format="%d/%m/%Y")
-
-            for entry in self.data:
-                if entry[1] == target_date:
-                    time_tc = entry[0]
-
-            if time_tc:
-                fig.add_trace(
-                    go.Scatter(
-                        x=[self.global_dates[int(time_tc)], self.global_dates[int(time_tc)]],
-                        y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
-                        mode="lines",
-                        line=dict(color="red", width=4),
-                        name="Real critical time",
-                        showlegend=True
-                    )
+    
+            fig.add_trace(
+                go.Scatter(
+                    x=[target_date, target_date],
+                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                    mode="lines",
+                    line=dict(color="red", width=4),
+                    name="Real critical time",
+                    showlegend=True
                 )
+            )
 
         # Je veux garder 1/5 du max de la time series en haut et en bas
         total_height = int(max(filtered_prices))
@@ -419,8 +423,12 @@ class Framework:
         # On divise l'espace en restant pour que chaque model ait la même hauteur
         rectangle_height = remaining_height / len(multiple_results.keys())
 
-        for i, model in enumerate(multiple_results.keys()):
-            best_results = multiple_results[model]
+        for i, (optimizer_name, results) in enumerate(multiple_results.items()):
+            # Récupération du modèle LPPL correspondant
+            lppl_model_name = optimiseurs_models[i] if optimiseurs_models and i < len(optimiseurs_models) else "Unknown Model"
+            legend_label = f"{optimizer_name} ({lppl_model_name})"
+            name_plot+=f"{optimizer_name}({lppl_model_name})_"
+            best_results = results
             significant_tc = []
             min_time = np.inf
             max_time = -np.inf
@@ -432,13 +440,13 @@ class Framework:
                     max_time = res["sub_end"]
                 if res["is_significant"]:
                     significant_tc.append([res["bestParams"][0], res["power_value"]])
-
+            
             try:
                 if (nb_tc != None):
-                    significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:nb_tc]
-                    significant_tc = [element[0] for element in significant_tc]
-                else:
-                    significant_tc = [element[0] for element in significant_tc]
+                    significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:min(len(significant_tc),nb_tc)]
+                sum_max_power = sum(x[1] for x in significant_tc)
+                weighted_sum_tc = sum(x[0] * x[1] for x in significant_tc)
+                significant_tc = weighted_sum_tc / sum_max_power if sum_max_power != 0 else 0
             except:
                 pass
 
@@ -454,33 +462,40 @@ class Framework:
                             y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
                             line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
-            if significant_tc and nb_tc == 1:
-                print(f"Model : {model}")
-                min_tc_date = self.global_dates[int(round(min(significant_tc)))] - timedelta(days=15)
-                max_tc_date = self.global_dates[int(round(max(significant_tc)))] + timedelta(days=15)
-                print(min_tc_date)
-                print(max_tc_date)
+            if significant_tc and isinstance(significant_tc, float):
+                print(f"Model : {optimizer_name}")
+                if len(self.global_dates) > significant_tc > 0:
+                    print(f"Significant TC : {self.global_dates[int(round(significant_tc))]}")
+                    min_tc_date = self.global_dates[int(round(significant_tc))] - timedelta(days=15)
+                    max_tc_date = self.global_dates[int(round(significant_tc))] + timedelta(days=15)
+
+                else:
+                    print("No significant TC found, or out of range")
+                    continue
 
                 # Rectangle pour le modèle
-                fig.add_trace(go.Scatter(x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
+                fig.add_trace(go.Scatter(
+                        x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
                         y=[base_y + i * rectangle_height, base_y + i * rectangle_height,
                            base_y + (i + 1) * rectangle_height,
                            base_y + (i + 1) * rectangle_height, base_y + i * rectangle_height],
-                        fill="toself", fillcolor=colors[i % len(colors)], opacity=0.5, showlegend=False,
-                        line=dict(color=colors[i % len(colors)], width=1), name=f"{model} critical time"))
+                        fill="toself", fillcolor=colors[i % len(colors)], opacity=0.5, showlegend=True,
+                        line=dict(color=colors[i % len(colors)], width=1), name=legend_label))
 
                 # Ajout du nom du modèle au centre du rectangle
                 center_x = min_tc_date + (max_tc_date - min_tc_date) / 2
                 center_y = base_y + i * rectangle_height + rectangle_height / 2
-                fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[model],mode="text",showlegend=False))
+                fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[optimizer_name],mode="text",showlegend=False))
 
         fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
         fig.show()
-        start_date_obj = datetime.strptime(start, "%d/%m/%Y")
-        end_date_obj = datetime.strptime(end, "%d/%m/%Y")
-        if not os.path.exists(f"results/algo_comparison/{self.frequency}"):
-            os.makedirs(f"results/algo_comparison/{self.frequency}")
-        pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{self.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", scale=5, width=1000, height=300)
+        if(save_plot):
+            start_date_obj = datetime.strptime(start, "%d/%m/%Y")
+            end_date_obj = datetime.strptime(end, "%d/%m/%Y")
+            if not os.path.exists(f"results/algo_comparison/{self.frequency}"):
+                os.makedirs(f"results/algo_comparison/{self.frequency}")
+            pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{name_plot}{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", 
+                            scale=5, width=1000, height=800)
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
