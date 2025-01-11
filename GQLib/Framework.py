@@ -24,7 +24,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False) -> None:
+    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False, is_sp : bool = True) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -44,13 +44,13 @@ class Framework:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
         self.lppl_model = lppl_model
-        self.data = self.load_data(is_uso)
+        self.data = self.load_data(is_uso, is_sp)
 
         self.global_times = self.data[:, 0].astype(float)
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
-    def load_data(self, is_uso) -> np.ndarray:
+    def load_data(self, is_uso, is_sp) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
 
@@ -68,8 +68,12 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        if is_uso == False:
+        if is_uso == False and is_sp == False:
             data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
+            data.columns = ["Date", "Price"]
+            data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+        elif is_sp == True and is_uso == False:
+            data = pd.read_csv(f'data/sp500_Price_daily.csv', sep=";")
             data.columns = ["Date", "Price"]
             data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
         else:
@@ -383,7 +387,7 @@ class Framework:
         name_plot =""
         if start_date is not None and end_date is not None:
             start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=2 * 365)
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=10 * 365)
         else:
             start_date = self.global_dates.min()
             end_date = self.global_dates.max()
@@ -581,5 +585,9 @@ class Framework:
         file_name : str
             Path to the output JSON file.
         """
+        if not os.path.exists(file_name.strip(file_name.split("/")[-1])):
+            os.makedirs(file_name)
+
+
         with open(file_name, "w") as f:
             json.dump(results, f, indent=4)
