@@ -92,8 +92,11 @@ class LPPLS:
         """
         f, g, h = self._compute_f_g_h()
         V = np.column_stack((np.ones_like(f), f, g, h))
-        params = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
-        self.A, self.B, self.C1, self.C2 = params
+        try:
+            params = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
+            self.A, self.B, self.C1, self.C2 = params
+        except np.linalg.LinAlgError:
+            self.A, self.B, self.C1, self.C2 = np.nan, np.nan, np.nan, np.nan
 
     def predict(self, include_oscillation: bool = True) -> np.ndarray:
         """

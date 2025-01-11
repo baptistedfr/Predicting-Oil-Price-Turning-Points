@@ -105,8 +105,10 @@ class LPPL:
         """
         f, g = self._compute_f_g()
         V = np.column_stack((np.ones_like(f), f, g))
-        self.A, self.B, self.C = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
-
+        try:
+            self.A, self.B, self.C = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
+        except np.linalg.LinAlgError:
+            self.A, self.B, self.C = np.nan, np.nan, np.nan
     def predict(self, include_oscillation: bool = True) -> np.ndarray:
         """
         Predict values using the LPPL model.

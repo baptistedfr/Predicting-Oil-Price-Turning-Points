@@ -480,7 +480,7 @@ class Framework:
             end_date_obj = datetime.strptime(end, "%d/%m/%Y")
             if not os.path.exists(f"results/algo_comparison/{self.frequency}"):
                 os.makedirs(f"results/algo_comparison/{self.frequency}")
-            pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{self.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", scale=5, width=1000, height=300)
+            pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{self.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", scale=5, width=1000, height=800)
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
