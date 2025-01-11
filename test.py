@@ -5,7 +5,28 @@ from GQLib.utilities import generate_all_dates, generate_all_rectangle
 
 generate_all_rectangle(frequency = "daily",
                         lppl_model = LPPL,
-                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU()],
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        significativity_tc=0.3,
+                        rerun = True,
+                        save=True)
+
+generate_all_rectangle(frequency = "daily",
+                        lppl_model = LPPLS,
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        significativity_tc=0.3,
+                        rerun = True,
+                        save=True)
+
+generate_all_rectangle(frequency = "weekly",
+                        lppl_model = LPPL,
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
+                        significativity_tc=0.3,
+                        rerun = True,
+                        save=True)
+
+generate_all_rectangle(frequency = "weekly",
+                        lppl_model = LPPLS,
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU(), MPGA(), PSO()],
                         significativity_tc=0.3,
                         rerun = True,
                         save=True)

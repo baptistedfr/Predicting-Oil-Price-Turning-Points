@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 from datetime import datetime, timedelta
 from tqdm import tqdm
 from datetime import datetime
+import plotly.io as pio
 from .Optimizers import MPGA, PSO, SGA, SA
 from GQLib.Optimizers import Optimizer
 from GQLib.LombAnalysis import LombAnalysis
 from GQLib.Models import LPPL, LPPLS
 import plotly.graph_objects as go
-
+import os
 
 class Framework:
     """
@@ -369,7 +370,8 @@ class Framework:
             "#b6e880",  # Vert lime
             "#ff97ff",  # Magenta clair
         ]
-
+        start = start_date
+        end = end_date
         if start_date is not None and end_date is not None:
             start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
             end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=2 * 365)
@@ -472,9 +474,13 @@ class Framework:
                 center_y = base_y + i * rectangle_height + rectangle_height / 2
                 fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[model],mode="text",showlegend=False))
 
-        fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
-        fig.show()
-
+            fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
+            fig.show()
+            start_date_obj = datetime.strptime(start, "%d/%m/%Y")
+            end_date_obj = datetime.strptime(end, "%d/%m/%Y")
+            if not os.path.exists(f"results/algo_comparison/{self.frequency}"):
+                os.makedirs(f"results/algo_comparison/{self.frequency}")
+            pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{self.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", scale=5, width=1000, height=300)
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
