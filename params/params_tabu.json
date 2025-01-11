@@ -35,7 +35,7 @@
             0.9
         ]
     },
-    "MAX_ITERATION": 100,
+    "MAX_ITERATION": 10000,
     "TABU_TENURE": 20,
     "NEIGHBORHOOD_SIZE": 20
 }

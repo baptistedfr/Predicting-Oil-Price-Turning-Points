@@ -35,7 +35,7 @@
             0.9
         ]
     },
-    "MAX_ITER": 1000,
+    "MAX_ITER": 100000,
     "INITIAL_TEMP": 1,
     "COOLING_RATE": 0.99
 }

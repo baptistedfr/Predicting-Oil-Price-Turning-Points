@@ -1,9 +1,16 @@
 from GQLib.Framework import Framework
 from GQLib.Optimizers import MPGA, PSO, SGA, SA, NELDER_MEAD, TABU
 from GQLib.Models import LPPL, LPPLS
+from GQLib.utilities import generate_all_dates, generate_all_rectangle
 
-fw_daily = Framework("daily", lppl_model=LPPL)
-fw_daily.generate_all_rectangle(optimizers = [SA(), SGA(), NELDER_MEAD(), TABU()] , rerun=True, save=True)
+generate_all_rectangle(frequency = "daily",
+                        lppl_model = LPPL,
+                        optimizers = [SA(), SGA(), NELDER_MEAD(), TABU()],
+                        significativity_tc=0.3,
+                        rerun = True,
+                        save=True)
+# fw_daily = Framework("daily", lppl_model=LPPL)
+# fw_daily.generate_all_rectangle(optimizers = [SA(), SGA(), NELDER_MEAD(), TABU()] , rerun=True, save=True)
 # fw_weekly = Framework("weekly", lppl_model=LPPL)
 # fw_weekly.generate_all_rectangle(optimizers = [SA(), SGA(), NELDER_MEAD(), TABU()] , rerun=True, save=True)
 # best_results = fw.analyze(result_json_name="results/SGA/daily/04-2003 01-2008.json")
