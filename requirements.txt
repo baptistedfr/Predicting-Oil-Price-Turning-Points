@@ -1,0 +1,8 @@
+numpy
+pandas
+matplotlib
+tdqm
+numba
+plotly
+astropy
+kaleido==0.1.0.post1

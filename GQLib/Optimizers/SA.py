@@ -2,7 +2,6 @@ from typing import Tuple
 import numpy as np
 import random
 from GQLib.Models import LPPL, LPPLS
-import json
 from .abstract_optimizer import Optimizer
 
 class SA(Optimizer):
