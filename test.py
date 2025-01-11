@@ -1,8 +1,7 @@
 from GQLib.Framework import Framework
 from GQLib.Optimizers import MPGA, PSO, SGA, SA, NELDER_MEAD, TABU, FA
 from GQLib.Models import LPPL, LPPLS
-from GQLib.utilities import generate_all_dates, generate_all_rectangle, generate_all_rectangle_sp
-
+from GQLib.utilities import generate_all_dates, generate_all_rectangle
 
 # generate_all_rectangle(frequency = "daily",
 #                         optimizers = [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)],
@@ -35,12 +34,4 @@ generate_all_rectangle(frequency = "weekly",
                         nb_tc = 20,
                         save=True,
                         save_plot=True)
-
-# SP analysis
-generate_all_rectangle_sp(frequency = "daily",
-                        lppl_model = LPPL,
-                        optimizers = [SA(), NELDER_MEAD()],
-                        significativity_tc=0.3,
-                        rerun = True,
-                        save=True)
 

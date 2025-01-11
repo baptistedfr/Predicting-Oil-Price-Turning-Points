@@ -12,6 +12,7 @@ from GQLib.LombAnalysis import LombAnalysis
 from GQLib.Models import LPPL, LPPLS
 import plotly.graph_objects as go
 import os
+from .enums import InputType
 
 class Framework:
     """
@@ -24,7 +25,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, is_uso : bool = False, is_sp : bool = True) -> None:
+    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, input_type : InputType = InputType.WTI) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -44,13 +45,14 @@ class Framework:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
         self.lppl_model = lppl_model
-        self.data = self.load_data(is_uso, is_sp)
+        self.input_type = input_type
+        self.data = self.load_data(input_type)
 
         self.global_times = self.data[:, 0].astype(float)
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
-    def load_data(self, is_uso, is_sp) -> np.ndarray:
+    def load_data(self, input_type : InputType = InputType.WTI) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
 
@@ -68,28 +70,27 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        if is_uso == False and is_sp == False:
-            data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
-            data.columns = ["Date", "Price"]
-            data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
-        elif is_sp == True and is_uso == False:
-            data = pd.read_csv(f'data/sp500_Price_daily.csv', sep=";")
-            data.columns = ["Date", "Price"]
-            data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
-        else:
-            data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
-            data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
-            data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y").values.astype("datetime64[D]")
+        match input_type:
+            case InputType.WTI:
+                data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
+                data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
+                data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y").values.astype("datetime64[D]")
 
+            case InputType.USO:
+                data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
+                data.columns = ["Date", "Price"]
+                data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
 
+            case InputType.SP500:
+                data = pd.read_csv(f'data/sp500_Price_daily.csv', sep=";")
+                data.columns = ["Date", "Price"]
+                data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+            
         # Date conversion and sorting
-        
         data = data.sort_values(by="Date")
-
         # Add numeric time index
         t = np.linspace(0, len(data) - 1, len(data))
         data = np.insert(data.to_numpy(), 0, t, axis=1)
-
         return data
 
 

@@ -1,10 +1,14 @@
 from datetime import datetime
+
 from .Optimizers import MPGA, PSO, SGA, SA
 from .Framework import Framework
 from GQLib.Optimizers import Optimizer
 from GQLib.LombAnalysis import LombAnalysis
 from GQLib.Models import LPPL, LPPLS
 import plotly.graph_objects as go
+from .enums import InputType
+
+
 
 def generate_all_dates( frequency : str = "daily",
                         optimizers : list[Optimizer] =  [SA(), SGA(), PSO(), MPGA()], 
@@ -28,7 +32,7 @@ def generate_all_dates( frequency : str = "daily",
     ]
 
     #Initialisation du Framework
-    fw = Framework(frequency = frequency)
+    fw = Framework(frequency = frequency, input_type=InputType.WTI)
     print(f"FREQUENCY : {frequency}")
 
     for optimizer in optimizers:
@@ -87,7 +91,7 @@ def generate_all_dates_sp(frequency: str = "daily",
     ]
 
     # Initialisation du Framework
-    fw = Framework(frequency=frequency, lppl_model=lppl_model)
+    fw = Framework(frequency=frequency, lppl_model=lppl_model, input_type=InputType.SP500)
     print(f"FREQUENCY : {frequency}")
 
     for optimizer in optimizers:
@@ -136,7 +140,7 @@ def generate_all_rectangle(frequency : str = "daily",
     }
     if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
-    fw = Framework(frequency = frequency)
+    fw = Framework(frequency = frequency, input_type=InputType.WTI)
     real_tcs = ['03/07/2008', '29/04/2011', '11/02/2016']
     optimiseurs_models = []
     print(f"FREQUENCY : {frequency}")
@@ -167,7 +171,7 @@ def generate_all_rectangle(frequency : str = "daily",
                                                                                 significativity_tc=significativity_tc)
 
         fw.compare_results_rectangle(multiple_results=best_results_list, 
-                                    name=f"Predicted critical times {frequency}",
+                                    name=f"Predicted critical times {frequency} WTI",
                                     data_name="WTI Data", 
                                     real_tc=real_tcs[compteur], 
                                     optimiseurs_models = optimiseurs_models,
@@ -191,7 +195,7 @@ def generate_all_rectangle_sp(frequency: str = "daily",
     }
     if frequency not in ["daily", "weekly", "monthly"]:
         raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
-    fw = Framework(frequency=frequency, lppl_model=lppl_model,is_uso=False, is_sp=True)
+    fw = Framework(frequency=frequency, lppl_model=lppl_model, input_type=InputType.SP500)
     real_tcs = ['03/03/2003', '01/10/2007', '03/02/2020']
 
     print(f"FREQUENCY : {frequency}")
