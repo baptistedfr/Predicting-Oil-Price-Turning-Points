@@ -6,26 +6,26 @@ from GQLib.AssetProcessor import AssetProcessor
 import numpy as np
 
 
-wti = AssetProcessor(input_type = InputType.WTI)
-# wti.generate_all_dates(frequency= "daily",
-#                         optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)], 
-#                         rerun = False,
-#                         nb_tc = None, 
-#                         significativity_tc = 0.3,
-#                         save  = False)
+cs300 = AssetProcessor(input_type = InputType.CS300)
+cs300.generate_all_rectangle(frequency= "daily",
+                        optimizers =  [SA(LPPL), SGA(LPPL), MPGA(LPPL), PSO(LPPL)],
+                        rerun = True,
+                        nb_tc = None,
+                        significativity_tc = 0.3,
+                        save  = False)
 
-significativity = np.arange(0.05,0.35, 0.05)
-tcs = np.arange(5,25, 5)
-
-for sig in significativity:
-    for tc in tcs:
-        wti.generate_all_rectangle(frequency = "daily",
-                            optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)], 
-                            significativity_tc=sig,
-                            rerun = False,
-                            nb_tc = tc,
-                            save=False,
-                            save_plot=False)
+# significativity = np.arange(0.05,0.35, 0.05)
+# tcs = np.arange(5,25, 5)
+#
+# for sig in significativity:
+#     for tc in tcs:
+#         wti.generate_all_rectangle(frequency = "daily",
+#                             optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)],
+#                             significativity_tc=sig,
+#                             rerun = False,
+#                             nb_tc = tc,
+#                             save=False,
+#                             save_plot=False)
 
 # wti.generate_all_rectangle(frequency = "daily",
 #                         optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)], 

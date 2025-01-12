@@ -89,6 +89,11 @@ class Framework:
                 data = pd.read_csv(f'data/BTC_{self.frequency}.csv', sep=";")
                 data.columns = ["Date", "Price"]
                 data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
+
+            case InputType.CS300:
+                data = pd.read_csv(f'data/CS300_Price_{self.frequency}.csv', sep=";")
+                data.columns = ["Date", "Price"]
+                data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
             
         # Date conversion and sorting
         data = data.sort_values(by="Date")
