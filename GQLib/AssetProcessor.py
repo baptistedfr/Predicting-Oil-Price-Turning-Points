@@ -29,6 +29,7 @@ class AssetProcessor:
     def generate_all_dates(self,
                            frequency : str = "daily",
                            optimizers : list[Optimizer] =  [SA(), SGA(), PSO(), MPGA()], 
+                           rerun : bool = False,
                            nb_tc : int = None, 
                            significativity_tc = 0.3,
                            save : bool = False):
@@ -46,22 +47,25 @@ class AssetProcessor:
             for set_name, (start_date, end_date) in self.dates_sets.items():
 
                 graph_start_date, graph_end_date = self.dates_graphs[current]
-                print(f"Running process for {set_name} from {start_date} to {end_date}")
-
-                # Exécute le processus d'optimisation pour l'intervalle de dates donné
-                results = fw.process(start_date, end_date, optimizer)
-
                 # Conversion des chaînes de dates en objets datetime pour faciliter le formatage
                 start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
                 end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
                 filename = f"results_{self.input_type.value}/{optimizer.__class__.__name__}/{frequency}/{optimizer.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.json"
                 
-                if save:
-                    # Sauvegarde des résultats au format JSON dans le fichier généré
-                    fw.save_results(results, filename)
+                if rerun : 
+                    print(f"Running process for {set_name} from {start_date} to {end_date}")
 
-                # Verification de la significativité des résultats
-                best_results = fw.analyze(results, significativity_tc=significativity_tc, lppl_model = optimizer.lppl_model)
+                    # Exécute le processus d'optimisation pour l'intervalle de dates donné
+                    results = fw.process(start_date, end_date, optimizer)
+                    if save:
+                        # Sauvegarde des résultats au format JSON dans le fichier généré
+                        fw.save_results(results, filename)
+                    # Verification de la significativité des résultats
+                    best_results = fw.analyze(results, significativity_tc=significativity_tc, lppl_model = optimizer.lppl_model)
+
+                else:
+                    best_results = fw.analyze(result_json_name=filename,significativity_tc=significativity_tc,lppl_model=optimizer.lppl_model)
+                
                 # Visualisation des résultats finaux
                 fw.visualize(
                     best_results,

@@ -103,6 +103,7 @@ class LombAnalysis:
         if use_package:
             ls = LombScargle(self.new_t, self.x)
             self.power = ls.power(self.freqs)
+            print("PACKAGE USED")
         else:
             J = len(self.new_t)
             mean_x = 1/J * np.sum(self.x)  # Mean of x

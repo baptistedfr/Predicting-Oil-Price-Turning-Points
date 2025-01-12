@@ -70,12 +70,12 @@ class Framework:
             - Column 2: Prices as float.
         """
         match input_type:
-            case InputType.WTI:
+            case InputType.USO:
                 data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
                 data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
                 data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y").values.astype("datetime64[D]")
 
-            case InputType.USO:
+            case InputType.WTI:
                 data = pd.read_csv(f'data/WTI_Spot_Price_{self.frequency}.csv', skiprows=4)
                 data.columns = ["Date", "Price"]
                 data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
@@ -84,6 +84,11 @@ class Framework:
                 data = pd.read_csv(f'data/sp500_Price_daily.csv', sep=";")
                 data.columns = ["Date", "Price"]
                 data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+            
+            case InputType.BTC : 
+                data = pd.read_csv(f'data/BTC_{self.frequency}.csv', sep=";")
+                data.columns = ["Date", "Price"]
+                data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
             
         # Date conversion and sorting
         data = data.sort_values(by="Date")
