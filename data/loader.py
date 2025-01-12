@@ -8,9 +8,9 @@ import yfinance as yf
 # data.to_csv(csv_file_path, sep=";")
 
 
-btc = yf.Ticker("BTC-USD")
-data = btc.history(period="max")
+cs300 = yf.Ticker("000300.SS")
+data = cs300.history(period="max")
 data = data[["Close"]].rename(columns={"Close": "Price"})
 data.index = data.index.strftime('%m/%d/%Y')
-csv_file_path = "BTC_Price_daily.csv"
+csv_file_path = "CS300_Price_daily.csv"
 data.to_csv(csv_file_path, sep=";")

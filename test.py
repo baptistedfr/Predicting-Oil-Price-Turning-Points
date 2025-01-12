@@ -6,14 +6,9 @@ from GQLib.AssetProcessor import AssetProcessor
 import numpy as np
 
 
-wti = AssetProcessor(input_type = InputType.WTI)
-# wti.generate_all_dates(frequency= "daily",
-#                         optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)], 
-#                         rerun = False,
-#                         nb_tc = None, 
-#                         significativity_tc = 0.3,
-#                         save  = False)
 
+
+wti = AssetProcessor(input_type = InputType.WTI)
 
 wti.generate_all_rectangle(frequency = "daily",
                         optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)], 
