@@ -25,7 +25,7 @@ sp500 = AssetProcessor(input_type = InputType.SP500)
 sp500.generate_all_rectangle(frequency = "daily",
                         optimizers =  [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS)], 
                         significativity_tc=0.3,
-                        rerun = False,
+                        rerun = True,
                         nb_tc = 20,
                         save=True,
                         save_plot=True)

@@ -475,13 +475,7 @@ class Framework:
             start_date_obj = datetime.strptime(start, "%d/%m/%Y")
             end_date_obj = datetime.strptime(end, "%d/%m/%Y")
             filename = f"results_{self.input_type.value}/algo_comparison//{self.frequency}/{name_plot}{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png"
-            directory_path = os.path.dirname(filename)
-
-            if not os.path.exists(directory_path):
-                print(f"{directory_path} path was created !")
-                os.makedirs(directory_path)
-
-            pio.write_image(fig, filename, scale=5, width=1000, height=800)
+            self.save_image(fig, filename)
 
 
     def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
@@ -621,3 +615,13 @@ class Framework:
 
         with open(file_name, "w") as f:
             json.dump(results, f, indent=4)
+    
+    @staticmethod
+    def save_image(fig , filename : str):
+        directory_path = os.path.dirname(filename)
+
+        if not os.path.exists(directory_path):
+            print(f"{directory_path} path was created !")
+            os.makedirs(directory_path)
+
+        pio.write_image(fig, filename, scale=5, width=1000, height=800)
