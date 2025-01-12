@@ -25,7 +25,7 @@ class Framework:
     - Visualization of results, including LPPL predictions and significant critical times.
     """
 
-    def __init__(self, frequency: str = "daily", lppl_model: 'LPPL | LPPLS' = LPPL, input_type : InputType = InputType.WTI) -> None:
+    def __init__(self, frequency: str = "daily", input_type : InputType = InputType.WTI) -> None:
         """
         Initialize the Framework with a specified frequency for analysis.
 
@@ -44,7 +44,6 @@ class Framework:
         if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
         self.frequency = frequency
-        self.lppl_model = lppl_model
         self.input_type = input_type
         self.data = self.load_data(input_type)
 
@@ -112,7 +111,6 @@ class Framework:
             Optimization results for each subinterval.
         """
         optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
-        optimizer.lppl_model = self.lppl_model #On force le LPPL 
         # Select data sample
         sample = self.select_sample(self.data, time_start, time_end) 
 
@@ -137,11 +135,12 @@ class Framework:
     def analyze(self,
                 results : dict = None,
                 result_json_name: str = None,
+                lppl_model: 'LPPL | LPPLS' = LPPL,
+                significativity_tc : float = 0.3,
                 use_package: bool = False,
                 remove_mpf: bool = True,
                 mpf_threshold: float = 1e-3,
-                show: bool = False,
-                significativity_tc : float = 0.3) -> dict:
+                show: bool = False) -> dict:
         """
         Analyze results using Lomb-Scargle periodogram and identify significant critical times.
 
@@ -186,7 +185,7 @@ class Framework:
             y_sub = self.global_prices[mask]
 
             # Lomb-Scargle analysis
-            lomb = LombAnalysis(self.lppl_model(t_sub, y_sub, res["bestParams"]))
+            lomb = LombAnalysis(lppl_model(t_sub, y_sub, res["bestParams"]))
             lomb.compute_lomb_periodogram(use_package=use_package)
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance(significativity_tc=significativity_tc)
@@ -222,52 +221,15 @@ class Framework:
 
         return best_results
 
-    def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
-        """
-        Visualize the LPPL or LPPLS fit alongside observed data.
 
-        Parameters
-        ----------
-        lppl : LPPL or LPPLS
-            An instance of the LPPL or LPPLS model with fitted parameters.
-        ax : matplotlib.axes.Axes, optional
-            An axis to plot on. If None, creates a new figure.
-        show : bool, optional
-            Whether to display the plot immediately. Default is False.
-        """
-
-        length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
-
-        # Calculate the maximum available length
-        max_length = len(self.global_prices)
-
-        # Adjust length_extended so it does not exceed the available length
-        length_extended = min(length_extended, max_length)
-
-        extended_t = np.arange(lppl.t[0], length_extended)
-        extended_y = self.global_prices[int(extended_t[0]):int(extended_t[-1] + 1)]
-        extended_dates = self.global_dates[int(extended_t[0]):int(extended_t[-1] + 1)]
-        end_date = self.global_dates[int(lppl.t[-1])]
-
-        lppl.t = extended_t
-        predicted = lppl.predict(True)
-
-        if ax is None:
-            fig, ax = plt.subplots(figsize=(10, 6))
-
-        ax.plot(extended_dates, extended_y, label='Observed')
-        ax.plot(extended_dates, predicted, label='Predicted')
-        ax.axvline(x=end_date, color='r', linestyle='--', label='End of Subinterval')
-        ax.set_xlabel('Date')
-        ax.set_ylabel('Price')
-        ax.set_title('LPPL Model Prediction')
-        ax.legend()
-
-        if show:
-            plt.show()
-
-    def visualize(self, best_results : dict, name = "", data_name: str = "",
-                  start_date: str = None, end_date: str = None, nb_tc : int = None) -> None:
+    def visualize(self, 
+                  best_results : dict, 
+                  name = "", 
+                  data_name: str = "",
+                  start_date: str = None, 
+                  end_date: str = None, 
+                  nb_tc : int = None,
+                  real_tc : str = None) -> None:
         """
         Visualize significant critical times on the price series.
         Permet de filtrer et d'afficher les résultats pour une plage de dates spécifique.
@@ -305,6 +267,21 @@ class Framework:
         fig = go.Figure()
         # Plot de la série de prix
         fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name))
+
+        # Si la vraie date du tc est fournie, on la plot
+        if real_tc is not None:
+            target_date = pd.to_datetime(real_tc, format="%d/%m/%Y")
+    
+            fig.add_trace(
+                go.Scatter(
+                    x=[target_date, target_date],
+                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                    mode="lines",
+                    line=dict(color="green", dash="longdash", width=4),
+                    name="Real critical time",
+                    showlegend=True
+                )
+            )
 
         for res in best_results:
             if res["sub_start"] < min_time:
@@ -497,10 +474,59 @@ class Framework:
         if(save_plot):
             start_date_obj = datetime.strptime(start, "%d/%m/%Y")
             end_date_obj = datetime.strptime(end, "%d/%m/%Y")
-            if not os.path.exists(f"results/algo_comparison/{self.frequency}"):
-                os.makedirs(f"results/algo_comparison/{self.frequency}")
-            pio.write_image(fig, f"results/algo_comparison/{self.frequency}/{name_plot}{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png", 
-                            scale=5, width=1000, height=800)
+            filename = f"results_{self.input_type.value}/algo_comparison//{self.frequency}/{name_plot}{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png"
+            directory_path = os.path.dirname(filename)
+
+            if not os.path.exists(directory_path):
+                print(f"{directory_path} path was created !")
+                os.makedirs(directory_path)
+
+            pio.write_image(fig, filename, scale=5, width=1000, height=800)
+
+
+    def show_lppl(self, lppl: 'LPPL | LPPLS', ax=None, show: bool = False) -> None:
+        """
+        Visualize the LPPL or LPPLS fit alongside observed data.
+
+        Parameters
+        ----------
+        lppl : LPPL or LPPLS
+            An instance of the LPPL or LPPLS model with fitted parameters.
+        ax : matplotlib.axes.Axes, optional
+            An axis to plot on. If None, creates a new figure.
+        show : bool, optional
+            Whether to display the plot immediately. Default is False.
+        """
+
+        length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
+
+        # Calculate the maximum available length
+        max_length = len(self.global_prices)
+
+        # Adjust length_extended so it does not exceed the available length
+        length_extended = min(length_extended, max_length)
+
+        extended_t = np.arange(lppl.t[0], length_extended)
+        extended_y = self.global_prices[int(extended_t[0]):int(extended_t[-1] + 1)]
+        extended_dates = self.global_dates[int(extended_t[0]):int(extended_t[-1] + 1)]
+        end_date = self.global_dates[int(lppl.t[-1])]
+
+        lppl.t = extended_t
+        predicted = lppl.predict(True)
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
+
+        ax.plot(extended_dates, extended_y, label='Observed')
+        ax.plot(extended_dates, predicted, label='Predicted')
+        ax.axvline(x=end_date, color='r', linestyle='--', label='End of Subinterval')
+        ax.set_xlabel('Date')
+        ax.set_ylabel('Price')
+        ax.set_title('LPPL Model Prediction')
+        ax.legend()
+
+        if show:
+            plt.show()
 
     @staticmethod
     def generate_subintervals(frequency :str, sample : np.asarray) -> list:
@@ -586,8 +612,11 @@ class Framework:
         file_name : str
             Path to the output JSON file.
         """
-        if not os.path.exists(file_name.strip(file_name.split("/")[-1])):
-            os.makedirs(file_name)
+        directory_path = os.path.dirname(file_name)
+
+        if not os.path.exists(directory_path):
+            print(f"{directory_path} path was created !")
+            os.makedirs(directory_path)
 
 
         with open(file_name, "w") as f:
