@@ -20,7 +20,7 @@ from GQLib.utilities import generate_all_dates, generate_all_rectangle
 #                          save_plot=True)
 
 generate_all_rectangle(frequency = "weekly",
-                        optimizers = [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS)],
+                        optimizers = [SA(LPPL), SGA(LPPL), NELDER_MEAD(LPPLS), TABU(LPPL), FA(LPPL), MPGA(LPPL), PSO(LPPL)],
                         significativity_tc=0.3,
                         rerun = True,
                         nb_tc = 20,
