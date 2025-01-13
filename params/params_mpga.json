@@ -35,8 +35,8 @@
             0.9
         ]
     },
-    "NUM_POPULATIONS": 10,
-    "POPULATION_SIZE": 100,
-    "MAX_GEN": 500,
-    "STOP_GEN": 50
+    "NUM_POPULATIONS": 15,
+    "POPULATION_SIZE": 150,
+    "MAX_GEN": 700,
+    "STOP_GEN": 80
 }
