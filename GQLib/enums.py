@@ -6,3 +6,4 @@ class InputType(Enum):
     BTC = "BTC"
     USO = "USO"
     SSE = "SSE"
+    EURUSD = "EURUSD"

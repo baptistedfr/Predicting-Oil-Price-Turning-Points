@@ -120,11 +120,12 @@ class AssetProcessor:
                     best_results_list[optimizer.__class__.__name__] = fw.analyze(result_json_name=filename,
                                                                                     significativity_tc=significativity_tc,
                                                                                     lppl_model=optimizer.lppl_model)
-
+                    
+            real_tc = self.real_tcs[compteur] if len(self.real_tcs)>compteur else None
             fw.compare_results_rectangle(multiple_results=best_results_list, 
                                         name=f"Predicted critical times {frequency} {self.input_type.value} from {start_date_obj.strftime('%m-%Y')} to {end_date_obj.strftime('%m-%Y')}",
                                         data_name=f"{self.input_type.value} Data", 
-                                        real_tc=self.real_tcs[compteur], 
+                                        real_tc=real_tc, 
                                         optimiseurs_models = optimiseurs_models,
                                         start_date=start_date,
                                         end_date=end_date,

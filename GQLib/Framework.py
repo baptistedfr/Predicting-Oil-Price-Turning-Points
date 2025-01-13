@@ -86,7 +86,7 @@ class Framework:
                 data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
             
             case InputType.BTC : 
-                data = pd.read_csv(f'data/BTC_{self.frequency}.csv', sep=";")
+                data = pd.read_csv(f'data/BTC_{self.frequency}.csv', sep=",")
                 data.columns = ["Date", "Price"]
                 data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
 
@@ -94,6 +94,11 @@ class Framework:
                 data = pd.read_csv(f'data/SSE_Price_{self.frequency}.csv', sep=";")
                 data.columns = ["Date", "Price"]
                 data["Date"] = pd.to_datetime(data["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
+
+            case InputType.EURUSD : 
+                data = pd.read_csv(f'data/EURUSD_{self.frequency}.csv', sep=";")
+                data.columns = ["Date", "Price"]
+                data["Date"] = pd.to_datetime(data["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
             
         # Date conversion and sorting
         data = data.sort_values(by="Date")
@@ -399,7 +404,7 @@ class Framework:
             fig.add_trace(
                 go.Scatter(
                     x=[target_date, target_date],
-                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                    y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1],
                     mode="lines",
                     line=dict(color="red", width=4),
                     name="Real critical time",
@@ -446,12 +451,12 @@ class Framework:
             if i == 0:
                 if start_date <= self.global_dates[int(min_time)] <= end_date:
                     fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                            y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1], mode="lines",
                             line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
 
                 if start_date <= self.global_dates[int(max_time)] <= end_date:
                     fig.add_trace(go.Scatter( x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                            y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1], mode="lines",
                             line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
             if significant_tc and isinstance(significant_tc, float):
@@ -460,6 +465,14 @@ class Framework:
                     print(f"Significant TC : {self.global_dates[int(round(significant_tc))]}")
                     min_tc_date = self.global_dates[int(round(significant_tc))] - timedelta(days=15)
                     max_tc_date = self.global_dates[int(round(significant_tc))] + timedelta(days=15)
+                elif significant_tc>len(self.global_dates):
+                    extra_dates_needed = int(significant_tc) - len(self.global_dates) + 1
+                    last_date = self.global_dates.max()
+                    freq = "B" if self.frequency == "daily" else "W"
+                    new_dates = pd.date_range(start=last_date + pd.Timedelta(days=1), periods=extra_dates_needed, freq=freq)
+                   
+                    min_tc_date = new_dates[extra_dates_needed - 1] - timedelta(days=15)
+                    max_tc_date = new_dates[extra_dates_needed - 1] + timedelta(days=15)
 
                 else:
                     print("No significant TC found, or out of range")
