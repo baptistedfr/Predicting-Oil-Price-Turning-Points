@@ -398,7 +398,7 @@ class Framework:
 
         name_plot =""
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+            start_date = pd.to_datetime(end_date, format="%d/%m/%Y") - timedelta(days=365)
             end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=10 * 365)
         else:
             start_date = self.global_dates.min()
