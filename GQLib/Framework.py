@@ -278,10 +278,9 @@ class Framework:
         
         filtered_dates = [self.global_dates[i] for i in filtered_indices]
         filtered_prices = [self.global_prices[i] for i in filtered_indices]
-
         fig = go.Figure()
         # Plot de la série de prix
-        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name))
+        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name, line=dict(color="black", width=1)))
 
         # Si la vraie date du tc est fournie, on la plot
         if real_tc is not None:
@@ -320,11 +319,12 @@ class Framework:
             if (nb_tc!=None):
                 significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:nb_tc]
                 significant_tc = [element[0] for element in significant_tc]
+                
             else:
                 significant_tc = [element[0] for element in significant_tc]
         except:
             pass
-
+        
         index_plot = 0
         for tc in significant_tc:
             try:
@@ -343,8 +343,27 @@ class Framework:
                     index_plot += 1
             except:
                 continue
+        
+
             
-        fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
+        fig.update_layout(title=name, 
+                          xaxis=dict(
+                            title='Date',               # Titre de l'axe X
+                            showline=True,              # Afficher la ligne de l'axe X
+                            linecolor='black',          # Couleur de la ligne de l'axe X
+                            linewidth=1,                # Épaisseur de la ligne
+                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                        ),
+                        yaxis=dict(
+                            title=f"{self.input_type.value} {self.frequency} price",              # Titre de l'axe Y
+                            showline=True,              # Afficher la ligne de l'axe Y
+                            linecolor='black',          # Couleur de la ligne de l'axe Y
+                            linewidth=1,                # Épaisseur de la ligne
+                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                        ),
+                          showlegend=True, 
+                          plot_bgcolor='white', 
+                          paper_bgcolor='white')
         fig.show()
 
     def compare_results_rectangle(self, multiple_results: dict[str, dict], 
@@ -379,7 +398,7 @@ class Framework:
 
         name_plot =""
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+            start_date = pd.to_datetime(end_date, format="%d/%m/%Y")
             end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=10 * 365)
         else:
             start_date = self.global_dates.min()
@@ -395,7 +414,7 @@ class Framework:
 
         fig = go.Figure()
         # Plot de la série de prix
-        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name))
+        fig.add_trace(go.Scatter(x=filtered_dates, y=filtered_prices, mode='lines', name=data_name, line = dict(color="black", width=1)))
 
         # Si la vraie date du tc est fournie, on la plot
         if real_tc is not None:
@@ -404,7 +423,7 @@ class Framework:
             fig.add_trace(
                 go.Scatter(
                     x=[target_date, target_date],
-                    y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1],
+                    y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02],
                     mode="lines",
                     line=dict(color="red", width=4),
                     name="Real critical time",
@@ -414,7 +433,7 @@ class Framework:
 
         # Je veux garder 1/5 du max de la time series en haut et en bas
         total_height = int(max(filtered_prices))
-        base_y = total_height / 5
+        base_y = total_height / 4
         remaining_height = total_height - 2 * base_y
 
         # On divise l'espace en restant pour que chaque model ait la même hauteur
@@ -451,12 +470,12 @@ class Framework:
             if i == 0:
                 if start_date <= self.global_dates[int(min_time)] <= end_date:
                     fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                            y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1], mode="lines",
+                            y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02], mode="lines",
                             line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
 
                 if start_date <= self.global_dates[int(max_time)] <= end_date:
                     fig.add_trace(go.Scatter( x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                            y=[min(filtered_prices)*0.9, max(filtered_prices)*1.1], mode="lines",
+                            y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02], mode="lines",
                             line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
             if significant_tc and isinstance(significant_tc, float):
@@ -485,14 +504,32 @@ class Framework:
                            base_y + (i + 1) * rectangle_height,
                            base_y + (i + 1) * rectangle_height, base_y + i * rectangle_height],
                         fill="toself", fillcolor=colors[i % len(colors)], opacity=0.5, showlegend=True,
-                        line=dict(color=colors[i % len(colors)], width=1), name=legend_label))
+                        mode="lines+markers", marker=dict(size=1), 
+                        line=dict(color="gray", width=1), name=legend_label))
 
                 # Ajout du nom du modèle au centre du rectangle
                 center_x = min_tc_date + (max_tc_date - min_tc_date) / 2
                 center_y = base_y + i * rectangle_height + rectangle_height / 2
                 fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[optimizer_name],mode="text",showlegend=False))
 
-        fig.update_layout(title=name, xaxis_title="Date", yaxis_title="Price", showlegend=True)
+        fig.update_layout(title=name, 
+                          xaxis=dict(
+                            title='Date',               # Titre de l'axe X
+                            showline=True,              # Afficher la ligne de l'axe X
+                            linecolor='black',          # Couleur de la ligne de l'axe X
+                            linewidth=1,                # Épaisseur de la ligne
+                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                        ),
+                        yaxis=dict(
+                            title=f"{self.input_type.value} {self.frequency} price",              # Titre de l'axe Y
+                            showline=True,              # Afficher la ligne de l'axe Y
+                            linecolor='black',          # Couleur de la ligne de l'axe Y
+                            linewidth=1,                # Épaisseur de la ligne
+                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                        ),
+                          showlegend=True, 
+                          plot_bgcolor='white', 
+                          paper_bgcolor='white')
         fig.show()
         if(save_plot):
             start_date_obj = datetime.strptime(start, "%d/%m/%Y")
