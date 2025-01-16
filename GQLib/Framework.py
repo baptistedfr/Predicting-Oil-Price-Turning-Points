@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 from tqdm import tqdm
 from datetime import datetime
 import plotly.io as pio
-from .Optimizers import MPGA, PSO, SGA, SA
-from GQLib.Optimizers import Optimizer
-from GQLib.LombAnalysis import LombAnalysis
-from GQLib.Models import LPPL, LPPLS
 import plotly.graph_objects as go
 import os
+
+from .Optimizers import MPGA, PSO, SGA, SA, Optimizer
+from GQLib.LombAnalysis import LombAnalysis
+from GQLib.Models import LPPL, LPPLS
 from .enums import InputType
 
 class Framework:
@@ -32,8 +32,11 @@ class Framework:
         Parameters
         ----------
         frequency : str, optional
-            The frequency of the time series data. Must be one of {"daily", "weekly", "monthly"}.
+            The frequency of the time series data. Must be one of {"daily", "weekly"}.
             Default is "daily".
+
+        input_type : InputType, optional
+            The  input type of the data selected
 
         Raises
         ------
@@ -43,15 +46,16 @@ class Framework:
         # Frequency validation and data loading
         if frequency not in ["daily", "weekly", "monthly"]:
             raise ValueError("The frequency must be one of 'daily', 'weekly', 'monthly'.")
+        
         self.frequency = frequency
         self.input_type = input_type
-        self.data = self.load_data(input_type)
+        self.data = self.load_data()
 
         self.global_times = self.data[:, 0].astype(float)
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
-    def load_data(self, input_type : InputType = InputType.WTI) -> np.ndarray:
+    def load_data(self) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
 
@@ -69,7 +73,7 @@ class Framework:
             - Column 1: Dates as np.datetime64[D].
             - Column 2: Prices as float.
         """
-        match input_type:
+        match self.input_type:
             case InputType.USO:
                 data = pd.read_csv(f'data/USO_{self.frequency}.csv', sep=";")
                 data['Price'] = data['Price'].apply(lambda x:x/8) # Stock split 1:8 en 2020
@@ -108,7 +112,7 @@ class Framework:
         return data
 
 
-    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> None:
+    def process(self, time_start: str, time_end: str, optimizer: Optimizer) -> dict:
         """
         Optimize LPPL parameters over multiple subintervals of the selected sample.
 
@@ -125,6 +129,7 @@ class Framework:
         dict
             Optimization results for each subinterval.
         """
+        # Configure the params of the optimizer based on the frequency
         optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
         # Select data sample
         sample = self.select_sample(self.data, time_start, time_end) 
@@ -165,13 +170,18 @@ class Framework:
             Optimization results to analyze.
         result_json_name : dict, optional
             Path to a JSON file containing results. If None, uses `self.results`.
+        lppl_model : 'LPPL | LPPLS'
+            Log Periodic Power Law Model utilized to computer the Lomb Periodogram
+        significativity_tc : float
+            Significance Threshold for Frequency Closeness. Default is 0.3
+        use_package : bool
+            Whether to use the astropy package to compute the Lomb Periodogram Power 
         remove_mpf : bool, optional
             Whether to remove the "most probable frequency" from the results. Default is True.
         mpf_threshold : float, optional
             Threshold for filtering frequencies close to the most probable frequency. Default is 1e-3.
         show : bool, optional
             Whether to display visualizations of the Lomb spectrum and LPPL fits. Default is False.
-
         Returns
         -------
         dict
@@ -193,7 +203,6 @@ class Framework:
             num_rows = (num_intervals + num_cols - 1) // num_cols
             fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
 
-        # for idx, res in enumerate(tqdm(results, desc="Analyzing results", unit="result")):
         for idx, res in enumerate(results):
             mask = (self.global_times >= res["sub_start"]) & (self.global_times <= res["sub_end"])
             t_sub = self.global_times[mask]
@@ -220,7 +229,7 @@ class Framework:
                 ax_lppl.set_title(f'Subinterval {idx + 1} LPPL')
 
 
-
+            # Add of the results
             best_results.append({
                 "sub_start": res["sub_start"],
                 "sub_end": res["sub_end"],
@@ -236,29 +245,18 @@ class Framework:
 
         return best_results
 
-
-    def visualize(self, 
-                  best_results : dict, 
-                  name = "", 
-                  data_name: str = "",
-                  start_date: str = None, 
-                  end_date: str = None, 
-                  nb_tc : int = None,
-                  real_tc : str = None) -> None:
+    def visualise_data(self,
+                       start_date : str = None,
+                       end_date : str = None):
         """
-        Visualize significant critical times on the price series.
-        Permet de filtrer et d'afficher les résultats pour une plage de dates spécifique.
-        
-        Args:
-            best_results (dict): Résultats optimaux contenant les informations des turning points.
-            name (str): Nom du graphique.
-            start_date (str): Date de début (format: 'YYYY-MM-DD'). Si None, utilise le début des données.
-            end_date (str): Date de fin (format: 'YYYY-MM-DD'). Si None, utilise la fin des données.
-        """
-        significant_tc = []
-        min_time = np.inf
-        max_time = -np.inf
+        Visualize the log price evolution over a specified date range
 
+        Parameters:
+            start_date (str, optional): The start date of the range to visualize, formatted as "DD/MM/YYYY". 
+                                        Defaults to the earliest available date.
+            end_date (str, optional): The end date of the range to visualize, formatted as "DD/MM/YYYY". 
+                                    Defaults to the latest available date.
+        """
         if start_date is not None:
             start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
         else:
@@ -268,6 +266,74 @@ class Framework:
             end_date = pd.to_datetime(end_date, format="%d/%m/%Y")
         else:
             end_date = self.global_dates.max()
+
+        filtered_indices = [
+            i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date
+        ]
+        if not filtered_indices:
+            print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
+            return
+        
+        filtered_dates = [self.global_dates[i] for i in filtered_indices]
+        filtered_prices = [self.global_prices[i] for i in filtered_indices]
+        fig = go.Figure()
+        name = f"Evolution of {self.input_type.value} log price"
+        fig.add_trace(go.Scatter(x=filtered_dates, y=np.log(filtered_prices), mode='lines', line=dict(color="black", width=1)))
+
+        fig.update_layout(title=name, 
+                          xaxis=dict(
+                            title='Date',               
+                            showline=True,            
+                            linecolor='black',         
+                            linewidth=1,                
+                            mirror=True                 
+                        ),
+                        yaxis=dict(
+                            title=f"{self.input_type.value} {self.frequency} log price",              
+                            showline=True,            
+                            linecolor='black',          
+                            linewidth=1,              
+                            mirror=True                
+                        ),
+                          showlegend=False, 
+                          plot_bgcolor='white', 
+                          paper_bgcolor='white')
+        fig.show()
+
+    def visualize_tc(self, 
+                  best_results : dict, 
+                  name = "", 
+                  data_name: str = "",
+                  start_date: str = None, 
+                  end_date: str = None, 
+                  nb_tc : int = None,
+                  real_tc : str = None) -> None:
+        """
+        Visualize significant critical times on the price series.
+        Allows filtering and displaying results for a specific date range.
+        
+        Args:
+            best_results (dict): Optimal results containing information about the turning points.
+            name (str): Name of the graph.
+            data_name (str) : Name of the data
+            start_date (str): Start date (format: 'YYYY-MM-DD'). If None, uses the start of the data.
+            end_date (str): End date (format: 'YYYY-MM-DD'). If None, uses the end of the data.
+            nb_tc (int): Maximum number of turning points to display.
+            real_tc (str): Actual value of the turning point.
+        """
+        significant_tc = []
+        min_time = np.inf
+        max_time = -np.inf
+
+        if start_date is not None:
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+        else:
+            start_date = np.min(self.global_dates)
+        
+        if end_date is not None:
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+        else:
+            end_date = np.max(self.global_dates)
 
         filtered_indices = [
             i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date
@@ -289,7 +355,7 @@ class Framework:
             fig.add_trace(
                 go.Scatter(
                     x=[target_date, target_date],
-                    y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                    y=[min(filtered_prices), max(filtered_prices)],
                     mode="lines",
                     line=dict(color="green", width=4),
                     name="Real critical time",
@@ -305,18 +371,20 @@ class Framework:
             if res["is_significant"]:
                 significant_tc.append([res["bestParams"][0], res["power_value"]])
 
+        # Add of computing start date and end date 
         if start_date <= self.global_dates[int(min_time)] <= end_date:
             fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                                     y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                                     y=[min(filtered_prices), max(filtered_prices)], mode="lines",
                                      line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
 
         if start_date <= self.global_dates[int(max_time)] <= end_date:
             fig.add_trace(go.Scatter(x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                                     y=[min(filtered_prices) - 10, max(filtered_prices) + 10], mode="lines",
+                                     y=[min(filtered_prices), max(filtered_prices)], mode="lines",
                                      line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
 
         try:
             if (nb_tc!=None):
+                # Select the number of tc
                 significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:nb_tc]
                 significant_tc = [element[0] for element in significant_tc]
                 
@@ -333,7 +401,7 @@ class Framework:
                     fig.add_trace(
                         go.Scatter(
                             x=[date_tc, date_tc],
-                            y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
+                            y=[min(filtered_prices), max(filtered_prices)],
                             mode="lines",
                             line=dict(color="red", dash="dot"),
                             name=f"Critical times" if index_plot == 0 else None,
@@ -344,29 +412,27 @@ class Framework:
             except:
                 continue
         
-
-            
         fig.update_layout(title=name, 
                           xaxis=dict(
-                            title='Date',               # Titre de l'axe X
-                            showline=True,              # Afficher la ligne de l'axe X
-                            linecolor='black',          # Couleur de la ligne de l'axe X
-                            linewidth=1,                # Épaisseur de la ligne
-                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                            title='Date',               
+                            showline=True,             
+                            linecolor='black',         
+                            linewidth=1,               
+                            mirror=True                 
                         ),
                         yaxis=dict(
-                            title=f"{self.input_type.value} {self.frequency} price",              # Titre de l'axe Y
-                            showline=True,              # Afficher la ligne de l'axe Y
-                            linecolor='black',          # Couleur de la ligne de l'axe Y
-                            linewidth=1,                # Épaisseur de la ligne
-                            mirror=True                 # Ajouter la ligne de l'axe sur le côté opposé
+                            title=f"{self.input_type.value} {self.frequency} price",              
+                            showline=True,            
+                            linecolor='black',          
+                            linewidth=1,                
+                            mirror=True                 
                         ),
                           showlegend=True, 
                           plot_bgcolor='white', 
                           paper_bgcolor='white')
         fig.show()
 
-    def compare_results_rectangle(self, multiple_results: dict[str, dict], 
+    def visualize_compare_results(self, multiple_results: dict[str, dict], 
                                   name: str = "", 
                                   data_name: str = "",
                                   real_tc: str = None, 
@@ -376,11 +442,17 @@ class Framework:
                                   nb_tc: int = 20,
                                   save_plot : bool = False):
         """
-        Visualize multiple run results
-
-        Parameters
-        ----------
-        multiple_results (dict[str, dict]): Dict of each model's results
+        Visualize and compare multiple optimizers results on the same period
+        Args:
+            multiple_results (dict[str, dict]): dictionnary of results to display
+            name (str, optional): Name of the graph Defaults to "".
+            data_name (str, optional): name of the data. Defaults to "".
+            real_tc (str, optional): The real tc to display.
+            optimiseurs_models (list, optional): Optimizers Models .
+            start_date (str, optional): start date of the computing interval. 
+            end_date (str, optional): end date of the computing interval. Defaults to None.
+            nb_tc (int, optional): Number of tc necessary to calcul the exact tc. Defaults to 20.
+            save_plot (bool, optional): Whether to save the plot. Defaults to False.
         """
         colors = [
             "#ffa15a",  # Orange clair
@@ -398,12 +470,12 @@ class Framework:
 
         name_plot =""
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(end_date, format="%d/%m/%Y")
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=1 * 365)
+            start_date = pd.to_datetime(start_date, format="%d/%m/%Y")
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=10 * 365)
         else:
-            start_date = self.global_dates.min()
-            end_date = self.global_dates.max()
-
+            start_date = np.min(self.global_dates)
+            end_date = np.max(self.global_dates)
+        # Filtration
         filtered_indices = [i for i, date in enumerate(self.global_dates) if start_date <= date <= end_date]
         if not filtered_indices:
             print(f"Aucune donnée disponible entre {start_date} et {end_date}.")
@@ -423,7 +495,7 @@ class Framework:
             fig.add_trace(
                 go.Scatter(
                     x=[target_date, target_date],
-                    y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02],
+                    y=[min(filtered_prices), max(filtered_prices)],
                     mode="lines",
                     line=dict(color="red", width=4),
                     name="Real critical time",
@@ -456,11 +528,13 @@ class Framework:
                 if res["is_significant"]:
                     significant_tc.append([res["bestParams"][0], res["power_value"]])
             
+            
             try:
                 if (nb_tc != None):
                     significant_tc = sorted(significant_tc, key=lambda x: x[1], reverse=True)[:min(len(significant_tc),nb_tc)]
-                sum_max_power = sum(x[1] for x in significant_tc)
-                weighted_sum_tc = sum(x[0] * x[1] for x in significant_tc)
+                #Calcul de la date exacte du tc en pondérant nb_tc par leur power
+                sum_max_power = sum(x[1] for x in significant_tc if x[1] is not None and not np.isnan(x[1]))
+                weighted_sum_tc = sum(x[0] * x[1] for x in significant_tc if x[1] is not None and not np.isnan(x[1]))
                 significant_tc = weighted_sum_tc / sum_max_power if sum_max_power != 0 else 0
             except:
                 pass
@@ -469,14 +543,15 @@ class Framework:
             if i == 0:
                 if start_date <= self.global_dates[int(min_time)] <= end_date:
                     fig.add_trace(go.Scatter(x=[self.global_dates[int(min_time)], self.global_dates[int(min_time)]],
-                            y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02], mode="lines",
+                            y=[min(filtered_prices), max(filtered_prices)], mode="lines",
                             line=dict(color="gray", dash="dash"), name="Start Date", showlegend=True))
 
                 if start_date <= self.global_dates[int(max_time)] <= end_date:
                     fig.add_trace(go.Scatter( x=[self.global_dates[int(max_time)], self.global_dates[int(max_time)]],
-                            y=[min(filtered_prices)*0.98, max(filtered_prices)*1.02], mode="lines",
+                            y=[min(filtered_prices), max(filtered_prices)], mode="lines",
                             line=dict(color="gray", dash="longdash"), name="End Date", showlegend=True))
-
+                    
+            # Calcul des dates des tc
             if significant_tc and isinstance(significant_tc, float):
                 print(f"Model : {optimizer_name}")
                 if len(self.global_dates) > significant_tc > 0:
@@ -533,6 +608,7 @@ class Framework:
                           paper_bgcolor='white')
         fig.show()
         if(save_plot):
+            # Sauvegarde du plot
             start_date_obj = datetime.strptime(start, "%d/%m/%Y")
             end_date_obj = datetime.strptime(end, "%d/%m/%Y")
             filename = f"results_{self.input_type.value}/algo_comparison//{self.frequency}/{name_plot}{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.png"
@@ -679,6 +755,16 @@ class Framework:
     
     @staticmethod
     def save_image(fig , filename : str):
+        """
+        Save image to a png file.
+
+        Parameters
+        ----------
+        fig : Figure
+            Figure to be saved.
+        filename : str
+            Path to the output png file.
+        """
         directory_path = os.path.dirname(filename)
 
         if not os.path.exists(directory_path):

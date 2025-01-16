@@ -1,17 +1,8 @@
-
 from typing import Tuple
 import numpy as np
-import json
 from GQLib.Models import LPPL, LPPLS
 from .abstract_optimizer import Optimizer, GeneticAlgorithm
-from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_immigration_operation,
-    njit_mutate,
-    njit_initialize_population
-)
+
 
 class SGA(GeneticAlgorithm):
     """
