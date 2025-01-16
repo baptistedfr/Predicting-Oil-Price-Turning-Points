@@ -291,7 +291,7 @@ class Framework:
                     x=[target_date, target_date],
                     y=[min(filtered_prices) - 10, max(filtered_prices) + 10],
                     mode="lines",
-                    line=dict(color="green", dash="longdash", width=4),
+                    line=dict(color="green", width=4),
                     name="Real critical time",
                     showlegend=True
                 )
@@ -398,8 +398,8 @@ class Framework:
 
         name_plot =""
         if start_date is not None and end_date is not None:
-            start_date = pd.to_datetime(end_date, format="%d/%m/%Y") - timedelta(days=365)
-            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=10 * 365)
+            start_date = pd.to_datetime(end_date, format="%d/%m/%Y")
+            end_date = pd.to_datetime(end_date, format="%d/%m/%Y") + timedelta(days=1 * 365)
         else:
             start_date = self.global_dates.min()
             end_date = self.global_dates.max()
@@ -432,10 +432,9 @@ class Framework:
             )
 
         # Je veux garder 1/5 du max de la time series en haut et en bas
-        total_height = int(max(filtered_prices))
-        base_y = total_height / 4
+        total_height = max(filtered_prices) - min(filtered_prices)
+        base_y = total_height / 6
         remaining_height = total_height - 2 * base_y
-
         # On divise l'espace en restant pour que chaque model ait la même hauteur
         rectangle_height = remaining_height / len(multiple_results.keys())
 
@@ -500,16 +499,18 @@ class Framework:
                 # Rectangle pour le modèle
                 fig.add_trace(go.Scatter(
                         x=[min_tc_date, max_tc_date, max_tc_date, min_tc_date, min_tc_date],
-                        y=[base_y + i * rectangle_height, base_y + i * rectangle_height,
-                           base_y + (i + 1) * rectangle_height,
-                           base_y + (i + 1) * rectangle_height, base_y + i * rectangle_height],
+                        y=[min(filtered_prices) + base_y + i * (rectangle_height) , 
+                           min(filtered_prices) + base_y + i * (rectangle_height),
+                           min(filtered_prices) + base_y + i * (rectangle_height) + rectangle_height,
+                           min(filtered_prices) + base_y + i * (rectangle_height) + rectangle_height, 
+                           min(filtered_prices) + base_y + i * (rectangle_height)],
                         fill="toself", fillcolor=colors[i % len(colors)], opacity=0.5, showlegend=True,
                         mode="lines+markers", marker=dict(size=1), 
                         line=dict(color="gray", width=1), name=legend_label))
 
                 # Ajout du nom du modèle au centre du rectangle
                 center_x = min_tc_date + (max_tc_date - min_tc_date) / 2
-                center_y = base_y + i * rectangle_height + rectangle_height / 2
+                center_y = min(filtered_prices) + base_y + i * (rectangle_height) + rectangle_height / 2
                 fig.add_trace(go.Scatter(x=[center_x],y=[center_y],text=[optimizer_name],mode="text",showlegend=False))
 
         fig.update_layout(title=name, 
