@@ -103,6 +103,7 @@ class LombAnalysis:
         if use_package:
             ls = LombScargle(self.new_t, self.x)
             self.power = ls.power(self.freqs)
+            print("PACKAGE USED")
         else:
             J = len(self.new_t)
             mean_x = 1/J * np.sum(self.x)  # Mean of x
@@ -200,8 +201,11 @@ class LombAnalysis:
         if self.filtered_freqs is None or self.filtered_power is None:
             raise RuntimeError("No filtered results found. Call filter_results() first.")
 
-        idx = np.argmax(self.filtered_power)
-        return abs(self.filtered_freqs[idx] - self.target_freq) < significativity_tc
+        if len(self.filtered_power) > 0:
+            idx = np.argmax(self.filtered_power)
+            return abs(self.filtered_freqs[idx] - self.target_freq) < significativity_tc
+        else:
+            return False
         
 
     def show_residuals(self, ax=None, show: bool = False) -> None:

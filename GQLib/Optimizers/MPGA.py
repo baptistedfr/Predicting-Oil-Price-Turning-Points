@@ -1,16 +1,10 @@
-
 from typing import Tuple
 import numpy as np
-import json
 from ..Models import LPPL, LPPLS
-from .abstract_optimizer import Optimizer, GeneticAlgorithm
+from .abstract_optimizer import GeneticAlgorithm
 from ..Models import LPPL, LPPLS
 from GQLib.njitFunc import (
-    njit_calculate_fitness,
-    njit_selection,
-    njit_crossover,
-    njit_mutate,
-    njit_initialize_population,
+
     njit_immigration_operation
 )
 
@@ -25,7 +19,8 @@ class MPGA(GeneticAlgorithm):
     def __init__(self, lppl_model: 'LPPL | LPPLS' = LPPL) -> None:
         """
         Initialize the MPGA optimizer.
-
+        lppl_model : 'LPPL | LPPLS'
+            Log Periodic Power Law Model to optimized
         """
         self.lppl_model = lppl_model
         self.NUM_POPULATIONS = None

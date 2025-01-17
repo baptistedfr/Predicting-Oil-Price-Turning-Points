@@ -1,7 +1,6 @@
 from typing import Tuple
 import numpy as np
 from GQLib.Models import LPPL, LPPLS
-import json
 from .abstract_optimizer import Optimizer
 from ..njitFunc import (
     njit_update_position,
@@ -26,7 +25,8 @@ class PSO(Optimizer):
 
         Parameters
         ----------
-        
+        lppl_model : 'LPPL | LPPLS'
+            Log Periodic Power Law Model to optimized
         w : float
             Weight in the velocity calculation corresponding to the inertia of the particle.
             The larger the parameter, the more freedom the particle has to move.
