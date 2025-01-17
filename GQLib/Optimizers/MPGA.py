@@ -77,7 +77,7 @@ class MPGA(GeneticAlgorithm):
             if local_min < bestObjV:
                 bestObjV = local_min
                 bestChrom = populations[m][np.argmin(fit)]
-        self.fitness_history[m].append(bestObjV)
+            self.fitness_history[m].append(bestObjV)
 
         # Initialize loop counters
         gen = 1
@@ -113,7 +113,7 @@ class MPGA(GeneticAlgorithm):
                 if local_min < newbestObjV:
                     newbestObjV = local_min
                     newbestChrom = populations[m][np.argmin(fitness_values[m])]
-            self.fitness_history[m].append(newbestObjV)
+                self.fitness_history[m].append(newbestObjV)
 
             # Update counters based on improvement
             if newbestObjV < bestObjV:

@@ -154,6 +154,7 @@ class AssetProcessor:
                     best_results_list[optimizer.__class__.__name__] = fw.analyze(results=results,
                                                                                     significativity_tc=significativity_tc,
                                                                                     lppl_model=optimizer.lppl_model)
+                    optimizer.visualize_convergence()
                     if save:
                         fw.save_results(results, filename)
                 else:
@@ -161,7 +162,8 @@ class AssetProcessor:
                     best_results_list[optimizer.__class__.__name__] = fw.analyze(result_json_name=filename,
                                                                                     significativity_tc=significativity_tc,
                                                                                     lppl_model=optimizer.lppl_model)
-                    
+
+
             real_tc = self.real_tcs[compteur] if len(self.real_tcs)>compteur else None
             fw.visualize_compare_results(multiple_results=best_results_list, 
                                         name=f"Predicted critical times {frequency} {self.input_type.value} from {start_date_obj.strftime('%m-%Y')} to {end_date_obj.strftime('%m-%Y')}",
