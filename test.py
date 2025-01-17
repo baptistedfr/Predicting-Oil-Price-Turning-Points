@@ -8,7 +8,7 @@ import numpy as np
 
 
 
-wti = AssetProcessor(input_type = InputType.WTI)
+wti = AssetProcessor(input_type = InputType.SSE)
 
 
 wti.compare_optimizers(frequency = "daily",
