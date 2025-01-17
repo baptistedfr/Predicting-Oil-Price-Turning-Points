@@ -113,7 +113,7 @@ class SA(Optimizer):
             # Acceptance probability
             delta = candidate_fitness - current_fitness
             if candidate_fitness < current_fitness or random.random() < np.exp(-delta / temperature):
-                current_solution = candidate_solution
+                current_solution = candidate_solution.copy()
                 current_fitness = candidate_fitness
                 self.fitness_history.append(current_fitness)
 
