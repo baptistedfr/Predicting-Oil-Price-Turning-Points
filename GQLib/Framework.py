@@ -47,6 +47,8 @@ class Framework:
         self.global_dates = self.data[:, 1]
         self.global_prices = self.data[:, 2].astype(float)
 
+        self.stop = False
+
     def load_data(self) -> np.ndarray:
         """
         Load financial time series data from a CSV file.
@@ -173,7 +175,7 @@ class Framework:
             num_intervals = len(self.results)
             num_cols = 3
             num_rows = (num_intervals + num_cols - 1) // num_cols
-            fig, axes = plt.subplots(num_intervals, num_cols, figsize=(12, 6 * num_rows))
+            fig, axes = plt.subplots(3, 1, figsize=(12, 18))
 
         for idx, res in enumerate(tqdm(self.results, desc="Analyzing results", unit="result")):
 
@@ -187,19 +189,25 @@ class Framework:
             lomb.filter_results(remove_mpf=remove_mpf, mpf_threshold=mpf_threshold)
             is_significant = lomb.check_significance()
 
-            if show:
-
-                ax_residuals = axes[idx, 0]
+            if show and idx == 0 and self.stop == False:
+                self.stop = True
+                fig_residuals, ax_residuals = plt.subplots(figsize=(13, 6))
                 lomb.show_residuals(ax=ax_residuals)
-                ax_residuals.set_title(f'Subinterval {idx + 1} Residuals')
+                ax_residuals.set_title('Subinterval Residuals')
+                fig_residuals.savefig(f'residuals_{idx}.png')
+                plt.close(fig_residuals)
             
-                ax_spectrum = axes[idx, 1]
-                lomb.show_spectrum(ax=ax_spectrum, use_filtered=True, show_threshold=True, highlight_freq=True)
-                ax_spectrum.set_title(f'Subinterval {idx + 1} Spectrum (Significant: {is_significant})')
+                fig_spectrum, ax_spectrum = plt.subplots(figsize=(13, 6))
+                lomb.show_spectrum(ax=ax_spectrum, use_filtered=False, show_threshold=True, highlight_freq=True)
+                ax_spectrum.set_title('Subinterval Lomb-Scargle Spectrum')
+                fig_spectrum.savefig(f'spectrum_{idx}.png')
+                plt.close(fig_spectrum)
 
-                ax_lppl = axes[idx, 2]
+                fig_lppl, ax_lppl = plt.subplots(figsize=(13, 6))
                 self.show_lppl(lomb.lppl, ax=ax_lppl)
-                ax_lppl.set_title(f'Subinterval {idx + 1} LPPL')
+                ax_lppl.set_title('Subinterval Log-Periodic Power Law Fit')
+                fig_lppl.savefig(f'lppl_{idx}.png')
+                plt.close(fig_lppl)
 
 
 
@@ -244,7 +252,7 @@ class Framework:
             Whether to display the plot immediately. Default is False.
         """
 
-        length_extended = (round(lppl.tc) + 1000) if self.frequency == "daily" else (round(lppl.tc) + 100) 
+        length_extended = (round(lppl.tc) + 50) if self.frequency == "daily" else (round(lppl.tc) + 100) 
 
         # Calculate the maximum available length
         max_length = len(self.global_prices)
@@ -258,14 +266,16 @@ class Framework:
         end_date = self.global_dates[int(lppl.t[-1])]
 
         lppl.t = extended_t
-        predicted = lppl.predict(True)
+        full = lppl.predict(True)
+        trend = lppl.predict(False)
 
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        ax.plot(extended_dates, extended_y, label='Observed')
-        ax.plot(extended_dates, predicted, label='Predicted')
-        ax.axvline(x=end_date, color='r', linestyle='--', label='End of Subinterval')
+        ax.plot(extended_dates, extended_y, label='Observed', color='black')
+        ax.plot(extended_dates, full, label='Log Periodic Power Law Model', linestyle='--', color='black')
+        ax.plot(extended_dates, trend, label='Power Law Model', linestyle='-.', color='darkgray')
+        ax.axvline(x=end_date, color='r', linestyle=':', label='End of Subinterval')
         ax.set_xlabel('Date')
         ax.set_ylabel('Price')
         ax.set_title('LPPL Model Prediction')

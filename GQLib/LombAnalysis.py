@@ -13,7 +13,7 @@ class LombAnalysis:
 
     def __init__(self,
                  lppl: LPPL,
-                 freqs: np.ndarray = np.linspace(0.0001, 20, 1000),
+                 freqs: np.ndarray = np.linspace(0.0001, 10, 1000),
                  significance_level: float = 0.95):
         """
         Initialize the LombAnalysis instance.
@@ -67,9 +67,9 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        #ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
+        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="black")
         #ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
-        ax.plot(self.new_t, self.lppl.hq_analysis(), label="Residuals with Oscillation (HQ)", color="green")
+        #ax.plot(self.new_t, self.lppl.hq_analysis(), label="Residuals with Oscillation (HQ)", color="green")
         ax.set_xlabel("Time (ln(tc - t))")
         ax.set_ylabel("Residuals")
         ax.set_title("LPPL Residuals")
@@ -251,7 +251,7 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        ax.plot(freqs_plot, power_plot, label="Lomb-Scargle Power", color="blue")
+        ax.plot(freqs_plot, power_plot, label="Lomb-Scargle Power", color="black")
         ax.set_xlabel("Frequency")
         ax.set_ylabel("Power")
         ax.set_title(title)
@@ -264,14 +264,13 @@ class LombAnalysis:
         if highlight_freq:
             ax.axvline(x=self.target_freq, color="green", linestyle=":", 
                         label=f"Highlighted freq={self.target_freq:.4f}")
-            ax.axvline(x=self.target_freq + 0.05, color="gray", linestyle=":")
-            ax.axvline(x=self.target_freq - 0.05, color="gray", linestyle=":")
+            ax.axvline(x=self.target_freq + 0.3, color="black", linestyle=":")
+            ax.axvline(x=self.target_freq - 0.3, color="black", linestyle=":")
 
         if show_max_power:
             idx_peak = np.argmax(power_plot)
             best_freq = freqs_plot[idx_peak]
-            ax.axvline(x=best_freq, color="orange", linestyle="--", label=f"Max Power={max(power_plot):.1f}, Len={len(self.new_t):.1f}, Ratio={max(power_plot)/len(self.new_t):.4f}")
-            
+            ax.plot(best_freq, power_plot[idx_peak], 'o', color="orange", label=f"Max Power={max(power_plot):.1f}")
 
         ax.legend()
 
