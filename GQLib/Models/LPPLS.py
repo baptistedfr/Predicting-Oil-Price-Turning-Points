@@ -148,6 +148,28 @@ class LPPLS:
         """
         self.compute_residuals(True)
         return np.sum(self.residuals ** 2)
+    
+    def get_non_linear_params(self) -> np.ndarray:
+        """
+        Get the non-linear parameters of the LPPL model.
+
+        Returns
+        -------
+        np.ndarray
+            Array of non-linear parameters [t_c, alpha, omega].
+        """
+        return np.array([self.tc, self.alpha, self.omega])
+    
+    def get_linear_params(self) -> np.ndarray:
+        """
+        Get the linear parameters of the LPPL model.
+
+        Returns
+        -------
+        np.ndarray
+            Array of linear parameters [A, B, C1, C2].
+        """
+        return np.array([self.A, self.B, self.C1, self.C2])
 
     @staticmethod
     def numba_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
@@ -167,3 +189,4 @@ class LPPLS:
             Residual Sum of Squares (RSS) value for the given parameters and data.
         """
         return njit_RSS_LPPLS(chromosome, data)
+    

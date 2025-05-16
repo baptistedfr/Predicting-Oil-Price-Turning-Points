@@ -109,6 +109,7 @@ class LPPL:
             self.A, self.B, self.C = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
         except np.linalg.LinAlgError:
             self.A, self.B, self.C = np.nan, np.nan, np.nan
+
     def predict(self, include_oscillation: bool = True) -> np.ndarray:
         """
         Predict values using the LPPL model.
@@ -158,6 +159,29 @@ class LPPL:
         """
         self.compute_residuals(True)
         return np.sum(self.residuals ** 2)
+
+    def get_non_linear_params(self) -> np.ndarray:
+        """
+        Get the nonlinear parameters of the LPPL model.
+
+        Returns
+        -------
+        np.ndarray
+            Array of nonlinear parameters [t_c, alpha, omega, phi].
+        """
+        return np.array([self.tc, self.alpha, self.omega, self.phi])
+    
+    def get_linear_params(self) -> np.ndarray:
+        """
+        Get the linear parameters of the LPPL model.
+
+        Returns
+        -------
+        np.ndarray
+            Array of linear parameters [A, B, C].
+        """
+        return np.array([self.A, self.B, self.C])
+
     
     @staticmethod
     def numba_RSS(chromosome: np.ndarray, data: np.ndarray) -> float:
