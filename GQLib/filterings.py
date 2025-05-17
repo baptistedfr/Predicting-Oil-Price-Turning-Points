@@ -191,7 +191,7 @@ class LPPLSConfidence(AbstractFilter):
         """
         Compute the number of oscillations based on the LPPLS parameters.
         """
-        return (omega) * np.log(np.abs((t_c - t1)/(t2 - t1)))
+        return (omega / 2 * np.pi) * np.log(np.abs((t_c - t1)/(t_c - t2)))
 
 class LombFilter(AbstractFilter):
     
