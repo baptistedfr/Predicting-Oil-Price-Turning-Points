@@ -28,7 +28,7 @@ class Optimizer(ABC):
         pass
 
     @abstractmethod
-    def fit(self, start: int, end: int, data: np.ndarray) -> Tuple[float, np.ndarray]:
+    def fit(self, start: int, end: int, data: np.ndarray, optional_params: dict) -> Tuple[float, np.ndarray]:
         """
         Fit the model parameters to a given subinterval of the data.
 
@@ -40,6 +40,8 @@ class Optimizer(ABC):
             The end index of the subinterval.
         data : np.ndarray
             A 2D array with time in the first column and observed values in the second.
+        optional_params : dict
+            Optional additional arguments for the optimizer (e.g., max iterations, tolerance).
 
         Returns
         -------

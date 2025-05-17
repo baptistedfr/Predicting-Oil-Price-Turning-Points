@@ -7,6 +7,7 @@ from .filterings import AbstractFilter
 from typing import List, Tuple, Union
 from enum import Enum
 import logging
+from datetime import datetime
 
 logging.getLogger(__name__)
 
@@ -28,7 +29,9 @@ class MiaouFramework:
                  optimizer: Optimizer,
                  filtering_method: AbstractFilter,
                  subinterval_method: SubIntervalMethod,
-                 window_length: int = 751):
+                 window_length: int = 751,
+                 plot_lppl_fit: bool = False,
+                 optimizer_params: Dict[str, Any] = None):
         """
         Parameters:
             data_names (DataName): reference to the data name
@@ -38,6 +41,8 @@ class MiaouFramework:
             filtering_method (AbstractFilter): filtering method to use (Lomb, Bounds, etc.)
             subinterval_method (SubIntervalMethod): subinterval method to use (shrinking, classic, etc.)
             window_lenght (int): length of the series to use for the crash probability calculation
+            plot_lppl_fit (bool): whether to plot the LPPL fit or not
+            optimizer_params (Dict[str, Any]): parameters for the optimizer (maxiter, maxfev, fatol, xatol)
         """
         self.data_names = data_names
         self.set_dates = set_dates
@@ -46,6 +51,8 @@ class MiaouFramework:
         self.filtering_method = filtering_method()
         self.subinterval_method = subinterval_method
         self.window_length = window_length
+        self.plot_lppl_fit = plot_lppl_fit
+        self.optimizer_params = optimizer_params
 
         logging.info(f"Data names: {self.data_names}")
         logging.info(f"Set dates: {self.set_dates}")
@@ -83,7 +90,6 @@ class MiaouFramework:
                 start_idx = pd.DatetimeIndex(timestamp).get_indexer([start_date_dt], method='ffill')[0]
                 end_idx = pd.DatetimeIndex(timestamp).get_indexer([end_date_dt], method='ffill')[0]
                 
-                # Select the time series  as : [t1 - window_lenght, t2]
                 sub_series = time_series[start_idx - self.window_length:end_idx]
 
                 for i in range(0, len(sub_series) - self.window_length, self.frequency):
@@ -149,10 +155,12 @@ class MiaouFramework:
 
             self.optimizer.PARAM_BOUNDS = self.filtering_method.get_search_space(sub_start, sub_end)
             logging.debug(f"\nSearch space: {self.optimizer.PARAM_BOUNDS}")
-            _, bestParams = self.optimizer.fit(sub_start, sub_end, sub_data)
+            _, bestParams = self.optimizer.fit(sub_start, sub_end, sub_data, self.optimizer_params)
 
             model = self.optimizer.lppl_model(sub_data[:, 0], sub_data[:, 1], bestParams)
-            model.show(save=True, name=f"res/{sub_start}_{sub_end}")
+            
+            if self.plot_lppl_fit:
+                model.show(save=True, name=f"res/{sub_start}_{sub_end}")
             linear_params, non_linear_params = model.get_linear_params(), model.get_non_linear_params()
 
             crash_proba += self.filtering_method.filter(linear_params, non_linear_params, sub_start, sub_end, sub_data[:, 1])
@@ -190,7 +198,8 @@ class MiaouFramework:
                 plt.show()
 
                 if save:
-                    fig.savefig(f"results/{asset}_{period}.png")
+                    # Save the figure with the current date and time
+                    fig.savefig(f"results/Run_Venise/{asset}_{period}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.png")
                     plt.close(fig)
 
                         

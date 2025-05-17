@@ -8,6 +8,8 @@ logging.getLogger(__name__)
 
 class AbstractFilter(ABC):
 
+    SEARCH_SPACE = {}
+
     @abstractmethod
     def filter(self, model_params: list) -> bool:
         """
@@ -20,20 +22,37 @@ class AbstractFilter(ABC):
             bool: True if the time series is filtered, False otherwise
         """
         pass
-
-    def get_bounds(self) -> Dict[str, List[float]]:
+    
+    def get_search_space(self, t1: int, t2: int) -> Dict[str, List[float]]:
         """
-        Get the bounds for the model parameters.
+        Get the search space for the model parameters, i.e. the bounds for the parameters.
+
+        Parameters:
+            t1 (int): start time of the interval
+            t2 (int): end time of the interval
+        
+        Returns:
+            Dict[str, List[float]]: search space for the model parameters
+        """
+        bounds = self.SEARCH_SPACE.copy()
+        bounds["t_c"] = self.adapt_bounds(bounds["t_c"], t1, t2)
+        return bounds
+    
+    @staticmethod
+    def adapt_bounds(t_c_bound: list[float], t1: float, t2: float) -> Tuple[float, float]:
+        """
+        Adapt the t_c bounds based on the time interval [t1, t2].
+
+        Parameters:
+            t_c_bound (list[float]): bounds for t_c
+            t1 (float): start time of the interval
+            t2 (float): end time of the interval
 
         Returns:
-            Dict[str, List[float]]: Dictionary of parameter bounds
+            Tuple[float, float]: adapted bounds for t_c
         """
-        pass
-
-class enculefilter(AbstractFilter):
-
-    def filter():
-        return True
+        t_c_bound = [t_c_bound[0] * (t2 - t1) + t2, t_c_bound[1] * (t2 - t1) + t2]
+        return t_c_bound
     
 class LPPLSConfidence(AbstractFilter):
 
@@ -114,8 +133,6 @@ class LPPLSConfidence(AbstractFilter):
         else:
             return 0
     
-
-    
     def _check_conditions(self, model_params: Dict[str, float], conditions: Dict[str, List[float]]) -> bool:
         """
         Check if the model parameters satisfy the filtering conditions.
@@ -169,16 +186,100 @@ class LPPLSConfidence(AbstractFilter):
         Compute the number of oscillations based on the LPPLS parameters.
         """
         return (omega) * np.log(np.abs((t_c - t1)/(t2 - t1)))
-    
-    @staticmethod
-    def adapt_bounds(t_c_bound: list[float], t1: float, t2: float) -> Tuple[float, float]:
-        """
-        Adapt the t_c bounds based on the time interval [t1, t2].
-        """
-        t_c_bound = [t_c_bound[0] * (t2 - t1) + t2, t_c_bound[1] * (t2 - t1) + t2]
-        return t_c_bound
 
-    def get_search_space(self, t1: int, t2: int) -> Dict[str, List[float]]:
-        bounds = self.SEARCH_SPACE.copy()
-        bounds["t_c"] = self.adapt_bounds(bounds["t_c"], t1, t2)
-        return bounds
+class LombFilter(AbstractFilter):
+    
+    SEARCH_SPACE = {
+        "alpha": [0, 2.0],
+        "omega": [1, 50],
+        "t_c": [-0.2, 0.2],
+        "phi": [0, 2 * np.pi],
+        }
+        
+    def filter(
+        self,
+        model_params: list,
+        residuals: np.ndarray,
+        t_series: np.ndarray,
+        significance_level: float = 0.95,
+        significativity_tc: float = 0.3
+    ) -> bool:
+        """
+        Filter the fit of the LPPL model based on the Lomb-Scargle periodogram.
+        Returns True if the main peak is significant and close to target frequency.
+
+        model_params: [t_c, omega, alpha]
+        significativity_tc: tolerance around target frequency
+        """
+        self.params = model_params
+        self.t_series = t_series
+        self.e = residuals
+        self.significance_level = significance_level
+
+        freqs, powers = self._compute_spectrum()
+        target_freq = self.params[1] / (2 * np.pi)
+
+        if powers.size == 0:
+            return False
+
+        peak_idx = np.argmax(powers)
+        peak_freq = freqs[peak_idx]
+
+        return abs(peak_freq - target_freq) < significativity_tc
+
+    def _compute_spectrum(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Compute Lomb-Scargle power spectrum for residuals.
+        """
+        tc = self.params[0]
+        dt = np.abs(self.t_series - tc)
+        e = self.e
+
+        mean_e = np.mean(e)
+        var_e = np.var(e, ddof=1)
+
+        freqs = np.linspace(0.0001, 20, 1000)
+        powers = np.array([self._compute_power(f, dt, mean_e, var_e) for f in freqs])
+
+        return self._lomb_scargle_filter(freqs, powers)
+
+    def _compute_power(self, f: float, dt: np.ndarray, mean_e: float, var_e: float) -> float:
+        """
+        Compute Lomb-Scargle power for one frequency.
+        """
+        omega = 2 * np.pi * f
+        sin_sum = np.sum(np.sin(omega * dt))
+        cos_sum = np.sum(np.cos(omega * dt))
+        tau = np.arctan2(sin_sum, cos_sum) / omega
+
+        e_centered = self.e - mean_e
+
+        arg = omega * (dt - tau)
+        cos_arg = np.cos(arg)
+        sin_arg = np.sin(arg)
+
+        cos_num = np.sum(e_centered * cos_arg) ** 2
+        cos_den = np.sum(cos_arg ** 2)
+        sin_num = np.sum(e_centered * sin_arg) ** 2
+        sin_den = np.sum(sin_arg ** 2)
+
+        return (cos_num / cos_den + sin_num / sin_den) / (2 * var_e)
+
+    def _lomb_scargle_filter(
+        self,
+        frequencies: np.ndarray,
+        powers: np.ndarray,
+        remove_mpf: bool = True
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Filter frequencies by false-alarm level and optional MPF removal.
+        """
+        M = len(frequencies)
+        critical = -np.log(1 - (1 - self.significance_level) ** (1.0 / M))
+
+        mask = powers >= critical
+        if remove_mpf:
+            mpf = 1.5 / len(self.e)
+            mask &= np.abs(frequencies - mpf) > 1e-3
+
+        return frequencies[mask], powers[mask]
