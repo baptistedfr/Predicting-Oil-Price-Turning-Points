@@ -8,6 +8,7 @@ from typing import List, Tuple, Union
 from enum import Enum
 import logging
 from datetime import datetime
+from .utils import timer
 
 logging.getLogger(__name__)
 
@@ -60,6 +61,7 @@ class MiaouFramework:
 
         optimizer.configure_params_from_frequency(optimizer.__class__.__name__)
 
+    @timer
     def run(self):
 
         self.results_dict = {}
@@ -171,7 +173,7 @@ class MiaouFramework:
         import matplotlib.pyplot as plt
 
         matplotlib_logger = logging.getLogger('matplotlib')
-        matplotlib_logger.setLevel(logging.WARNING)  # ou ERROR si tu veux encore moins
+        matplotlib_logger.setLevel(logging.WARNING)
 
         for asset, asset_data in self.results_dict.items():
             for period, period_data in asset_data.items():
