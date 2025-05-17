@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from GQLib.Models import LPPL, LPPLS
 import logging
+from statsmodels.tsa.stattools import adfuller
 
 logging.getLogger(__name__)
 
@@ -301,6 +302,7 @@ class StationarityFilter(AbstractFilter):
     def filter(self, filter_params: Dict[str, Any]) -> bool:
         """
         Filter the time series estimation based on the model parameters.
+        The time series is considered positively filtered if the ADF test p-value is less than 0.05.
 
         Parameters:
             filter_params (Dict[str, Any]): dictionary of filter parameters
@@ -310,3 +312,9 @@ class StationarityFilter(AbstractFilter):
         Returns:
             bool: True if the time series is filtered, False otherwise
         """
+        model_residuals = filter_params["model_residuals"]
+
+        if adfuller(model_residuals)[1] < 0.05:
+            return True
+        else:
+            return False

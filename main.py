@@ -1,7 +1,7 @@
 from GQLib.MiaouFramework import MiaouFramework, DataName
 from GQLib.subintervals import SubIntervalMethod
 from GQLib.Optimizers import NELDER_MEAD, MPGA, SA, TABU
-from GQLib.filterings import LombFilter, LPPLSConfidence
+from GQLib.filterings import LombFilter, LPPLSConfidence, StationarityFilter
 from GQLib.Models import LPPL, LPPLS
 
 from GQLib.logging import configure_logger
