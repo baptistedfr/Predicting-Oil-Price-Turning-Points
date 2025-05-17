@@ -11,12 +11,12 @@ class AbstractFilter(ABC):
     SEARCH_SPACE = {}
 
     @abstractmethod
-    def filter(self, model_params: list) -> bool:
+    def filter(self, filter_params: Dict[str, Any]) -> bool:
         """
         Filter the time series estimation based on the model parameters.
 
         Parameters:
-            model_params (list): list of model parameters [t_c, omega, alpha]
+            filter_params (Dict[str, Any]): dictionary of params for the specific filter
 
         Returns:
             bool: True if the time series is filtered, False otherwise
@@ -83,18 +83,27 @@ class LPPLSConfidence(AbstractFilter):
         super().__init__()
 
 
-    def filter(self, linear_params: np.ndarray, non_linear_params: np.ndarray, t1, t2, prices) -> bool:
+    def filter(self, filter_params: Dict[str, Any]) -> bool:
         """
         Check if the model parameters are valid based on the filtering conditions.
 
         Parameters:
-            linear_params (np.ndarray): Linear parameters of the model.
-            non_linear_params (np.ndarray): Non-linear parameters of the model.
+            filter_params (Dict[str, Any]): dictionary of filter parameters
+                - linear_params: np.ndarray
+                - non_linear_params: np.ndarray
+                - t1: float
+                - t2: float
+                - prices: np.array
 
         Returns:
             bool: True if the parameters are valid, False otherwise.
         """
-        
+        linear_params = filter_params["linear_params"]
+        non_linear_params = filter_params["non_linear_params"]
+        t1 = filter_params["t1"]
+        t2 = filter_params["t2"]
+        prices = filter_params["prices"]
+
         if len(linear_params) == 4:
             A, B, C1, C2 = linear_params
             C = self.compute_C(C1, C2)
@@ -196,25 +205,24 @@ class LombFilter(AbstractFilter):
         "phi": [0, 2 * np.pi],
         }
         
-    def filter(
-        self,
-        model_params: list,
-        residuals: np.ndarray,
-        t_series: np.ndarray,
-        significance_level: float = 0.95,
-        significativity_tc: float = 0.3
-    ) -> bool:
+    def filter(self, filter_params: Dict[str, Any]) -> bool:
         """
         Filter the fit of the LPPL model based on the Lomb-Scargle periodogram.
         Returns True if the main peak is significant and close to target frequency.
 
-        model_params: [t_c, omega, alpha]
-        significativity_tc: tolerance around target frequency
+        Parameters:
+            filter_params (Dict[str, Any]): dictionary of filter parameters
+                - model_params (list): list of model parameters [t_c, omega, alpha]
+                - residuals (np.ndarray): residuals of the LPPL model
+                - t_series (np.ndarray): time series data
+                - significance_level (float): significance level for the Lomb-Scargle test
+                - significativity_tc (float): threshold for the target frequency
         """
-        self.params = model_params
-        self.t_series = t_series
-        self.e = residuals
-        self.significance_level = significance_level
+        self.params = filter_params["model_params"]
+        self.t_series = filter_params["t_series"]
+        self.e = filter_params["residuals"]
+        self.significance_level = filter_params["significance_level"]
+        significativity_tc = filter_params["significativity_tc"]
 
         freqs, powers = self._compute_spectrum()
         target_freq = self.params[1] / (2 * np.pi)
@@ -283,3 +291,22 @@ class LombFilter(AbstractFilter):
             mask &= np.abs(frequencies - mpf) > 1e-3
 
         return frequencies[mask], powers[mask]
+    
+class StationarityFilter(AbstractFilter):
+    """
+    Filter based on the stationarity of the time series.
+        -> The lppl model residuals should be stationary to be valid.
+    """
+
+    def filter(self, filter_params: Dict[str, Any]) -> bool:
+        """
+        Filter the time series estimation based on the model parameters.
+
+        Parameters:
+            filter_params (Dict[str, Any]): dictionary of filter parameters
+                - model_params (list)
+                - model_residuals (np.ndarray)
+
+        Returns:
+            bool: True if the time series is filtered, False otherwise
+        """
