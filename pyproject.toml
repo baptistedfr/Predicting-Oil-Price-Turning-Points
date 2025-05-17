@@ -13,6 +13,7 @@ dependencies = [
     "plotly>=6.1.0",
     "rich>=14.0.0",
     "scipy>=1.15.3",
+    "statsmodels>=0.14.4",
     "tdqm>=0.0.1",
     "yfinance>=0.2.61",
 ]

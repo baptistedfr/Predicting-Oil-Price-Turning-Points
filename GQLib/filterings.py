@@ -99,11 +99,14 @@ class LPPLSConfidence(AbstractFilter):
         Returns:
             bool: True if the parameters are valid, False otherwise.
         """
-        linear_params = filter_params["linear_params"]
-        non_linear_params = filter_params["non_linear_params"]
-        t1 = filter_params["t1"]
-        t2 = filter_params["t2"]
-        prices = filter_params["prices"]
+        linear_params = filter_params.get("linear_params", None)
+        non_linear_params = filter_params.get("non_linear_params", None)
+        t1 = filter_params.get("t1", None)
+        t2 = filter_params.get("t2", None)
+        prices = filter_params.get("prices", None)
+
+        if any(param is None for param in [linear_params, non_linear_params, t1, t2, prices]):
+            raise ValueError("Model parameters, time series, and bounds must be provided for filtering.")
 
         if len(linear_params) == 4:
             A, B, C1, C2 = linear_params
@@ -129,19 +132,12 @@ class LPPLSConfidence(AbstractFilter):
             "damping": self.compute_dampling(alpha, B, omega, C),
         }
 
-        sign = np.median(prices / prices[0] - 1)
-
         logging.debug("Model parameters: %s", model_params)
 
         logging.debug("Window size: %s", t2 - t1)
     
-        if self._check_conditions(model_params, conditions):
-            if sign > 0:
-                return 1
-            else:
-                return -1
-        else:
-            return 0
+        return self._check_conditions(model_params, conditions)
+
     
     def _check_conditions(self, model_params: Dict[str, float], conditions: Dict[str, List[float]]) -> bool:
         """
@@ -154,24 +150,24 @@ class LPPLSConfidence(AbstractFilter):
         Returns:
             bool: True if the model parameters satisfy the conditions, False otherwise.
         """
+
+        all_valid = True
         for param, bounds in conditions.items():
-            all_valid = True
-            for param, bounds in conditions.items():
-                value = model_params[param]
-                lower = f"{bounds[0]:.2f}"
-                val = f"{value:.2f}"
-                upper = f"{bounds[1]:.2f}"
-                param_formatted = f"{param:<20}"  # left-align parameter name in a 20-char field
-                lower_formatted = f"{lower:>8}"   # right-align bounds and value in an 8-char field
-                val_formatted = f"{val:>8}"
-                upper_formatted = f"{upper:>8}"
-                if bounds[0] <= value <= bounds[1]:
-                    logging.debug(f"Condition for {param_formatted}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : True")
-                else:
-                    logging.debug(f"Condition for {param_formatted}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : False")
-                    all_valid = False
-            return all_valid
-    
+            value = model_params[param]
+            lower = f"{bounds[0]:.2f}"
+            val = f"{value:.2f}"
+            upper = f"{bounds[1]:.2f}"
+            param_formatted = f"{param:<20}"  # left-align parameter name in a 20-char field
+            lower_formatted = f"{lower:>8}"   # right-align bounds and value in an 8-char field
+            val_formatted = f"{val:>8}"
+            upper_formatted = f"{upper:>8}"
+            if bounds[0] <= value <= bounds[1]:
+                logging.debug(f"Condition for {param_formatted}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : True")
+            else:
+                logging.debug(f"Condition for {param_formatted}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : False")
+                all_valid = False
+        return all_valid
+
     def compute_C(self, C1: float, C2: float) -> float:
         """
         Compute the C parameter based on C1 and C2.
@@ -208,25 +204,48 @@ class LombFilter(AbstractFilter):
         
     def filter(self, filter_params: Dict[str, Any]) -> bool:
         """
-        Filter the fit of the LPPL model based on the Lomb-Scargle periodogram.
-        Returns True if the main peak is significant and close to target frequency.
+        Filters the LPPL model's fit using the Lomb-Scargle periodogram analysis.
 
-        Parameters:
-            filter_params (Dict[str, Any]): dictionary of filter parameters
-                - model_params (list): list of model parameters [t_c, omega, alpha]
-                - residuals (np.ndarray): residuals of the LPPL model
-                - t_series (np.ndarray): time series data
-                - significance_level (float): significance level for the Lomb-Scargle test
-                - significativity_tc (float): threshold for the target frequency
+        This method computes the spectral power of the model's residuals and checks if the primary
+        frequency peak is both statistically significant and sufficiently close to the target frequency,
+        which is derived from the provided model parameters.
+
+            filter_params (Dict[str, Any]): A dictionary containing the following keys:
+                - non_linear_params (list): List of model parameters [t_c, omega, alpha].
+                - t_series (np.ndarray): Time series data.
+                - residuals (np.ndarray): Residuals of the LPPL model.
+                - significance_level (float, optional): Significance level for the Lomb-Scargle test (default is 0.05).
+                - significativity_tc (float, optional): Tolerance threshold for the target frequency (default is 0.1).
+
+        Returns:
+            bool: True if the highest power peak in the periodogram is close enough to the target frequency; otherwise, False.
+
+        Raises:
+            ValueError: If any of the required keys ('non_linear_params', 't_series', or 'residuals') are missing in filter_params.
         """
-        self.params = filter_params["model_params"]
-        self.t_series = filter_params["t_series"]
-        self.e = filter_params["residuals"]
-        self.significance_level = filter_params["significance_level"]
-        significativity_tc = filter_params["significativity_tc"]
+
+        self.params = filter_params.get("non_linear_params", None)
+        if self.params is None:
+            raise ValueError("Model parameters must be provided for Lomb-Scargle filtering.")
+        self.t_series = filter_params.get("t_series", None)
+        if self.t_series is None:
+            raise ValueError("Time series must be provided for Lomb-Scargle filtering.")
+        self.e = filter_params.get("residuals", None)
+        if self.e is None:
+            raise ValueError("Residuals must be provided for Lomb-Scargle filtering.")
+        self.significance_level = filter_params.get("significance_level", 0.95)
+        significativity_tc = filter_params.get("significativity_tc", 0.3)
 
         freqs, powers = self._compute_spectrum()
-        target_freq = self.params[1] / (2 * np.pi)
+        target_freq = (self.params[2] if len(self.params) == 3 else self.params[3]) / (2 * np.pi)
+
+        if len(self.params) == 4:
+            logging.debug(f"Non-linear params -> t_c: {self.params[0]}, alpha: {self.params[1]}, phi: {self.params[2]}, omega: {self.params[3]}")
+        elif len(self.params) == 3:
+            logging.debug(f"Non-linear params -> t_c: {self.params[0]}, alpha: {self.params[1]}, omega: {self.params[2]}")
+        logging.debug(f"Condition: {target_freq:.2f} +/- {significativity_tc:.2f}")
+        logging.debug(f"Peak frequency: {freqs[np.argmax(powers)]:.2f}")
+        logging.debug(f"Peak power: {powers.max():.2f}")
 
         if powers.size == 0:
             return False
@@ -234,7 +253,20 @@ class LombFilter(AbstractFilter):
         peak_idx = np.argmax(powers)
         peak_freq = freqs[peak_idx]
 
-        return abs(peak_freq - target_freq) < significativity_tc
+        lower = f"{(target_freq - significativity_tc):.2f}"
+        val = f"{peak_freq:.2f}"
+        upper = f"{(target_freq + significativity_tc):.2f}"
+        lower_formatted = f"{lower:>8}"
+        val_formatted = f"{val:>8}"
+        upper_formatted = f"{upper:>8}"
+
+        condition = abs(peak_freq - target_freq) < significativity_tc
+        if condition:
+            logging.debug(f"Condition for {'Frequency':<20}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : True")
+        else:
+            logging.debug(f"Condition for {'Frequency':<20}: {lower_formatted} <= {val_formatted} <= {upper_formatted} : False")
+
+        return condition
 
     def _compute_spectrum(self) -> Tuple[np.ndarray, np.ndarray]:
         """

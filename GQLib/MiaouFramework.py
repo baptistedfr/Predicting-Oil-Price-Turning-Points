@@ -165,10 +165,25 @@ class MiaouFramework:
                 model.show(save=True, name=f"res/{sub_start}_{sub_end}")
             linear_params, non_linear_params = model.get_linear_params(), model.get_non_linear_params()
 
-            crash_proba += self.filtering_method.filter(linear_params, non_linear_params, sub_start, sub_end, sub_data[:, 1])
+            filter_params = {}
+            filter_params["linear_params"] = linear_params
+            filter_params["non_linear_params"] = non_linear_params
+            filter_params["t1"] = sub_start
+            filter_params["t2"] = sub_end
+            filter_params["prices"] = sub_data[:, 1]
+            filter_params["t_series"] = sub_data[:, 0]
+            filter_params["model"] = model
+            filter_params["residuals"] =model.compute_residuals()
+
+            sign = np.median(sub_data[:, 1] / sub_data[:, 1][0] - 1)
+            if self.filtering_method.filter(filter_params):
+                if sign > 0:
+                    crash_proba += 1
+                else:
+                    crash_proba -= 1
 
         return crash_proba / len(sub_intervals)
-    
+
     def visualize(self, save: bool = False):
         import matplotlib.pyplot as plt
 
@@ -177,6 +192,16 @@ class MiaouFramework:
 
         for asset, asset_data in self.results_dict.items():
             for period, period_data in asset_data.items():
+
+                if save:
+                    # Create a df with period_data["confidence"] and period_data["price"] and as index the dates
+                    period_data["confidence"] = period_data["confidence"].astype(float)
+                    period_data["price"] = period_data["price"].astype(float)
+                    df = pd.DataFrame({
+                        "confidence": period_data["confidence"],
+                        "price": period_data["price"]
+                    }, index=period_data["confidence"].index)
+                    df.to_csv(f"results/Run_Venise/{asset}_{period}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv")
                 fig, ax1 = plt.subplots(figsize=(10, 6))
 
                 dates = period_data["confidence"].index
@@ -197,11 +222,12 @@ class MiaouFramework:
 
                 plt.title(f"{asset} - {period}")
                 fig.tight_layout()
-                plt.show()
-
                 if save:
                     # Save the figure with the current date and time
-                    fig.savefig(f"results/Run_Venise/{asset}_{period}_{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}.png")
+                    fig.savefig(f"results/Run_Venise/{asset}_{period}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.png")
                     plt.close(fig)
+                plt.show()
+
+
 
                         
