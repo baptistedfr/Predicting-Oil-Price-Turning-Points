@@ -6,6 +6,9 @@ from .subintervals import MiaouIntervals, DidouIntervals, SubIntervalMethod
 from .filterings import AbstractFilter
 from typing import List, Tuple, Union
 from enum import Enum
+import logging
+
+logging.getLogger(__name__)
 
 class DataName(Enum):
     BTC = "BTC_daily.csv"
@@ -25,7 +28,7 @@ class MiaouFramework:
                  optimizer: Optimizer,
                  filtering_method: AbstractFilter,
                  subinterval_method: SubIntervalMethod,
-                 window_lenght: int):
+                 window_length: int = 751):
         """
         Parameters:
             data_names (DataName): reference to the data name
@@ -42,9 +45,13 @@ class MiaouFramework:
         self.optimizer = optimizer
         self.filtering_method = filtering_method()
         self.subinterval_method = subinterval_method
-        self.window_lenght = window_lenght
+        self.window_length = window_length
 
-        self.optimizer.configure_params_from_frequency("daily", self.optimizer.__class__.__name__)
+        logging.info(f"Data names: {self.data_names}")
+        logging.info(f"Set dates: {self.set_dates}")
+        logging.info(f"Frequency: {self.frequency}")
+
+        optimizer.configure_params_from_frequency(optimizer.__class__.__name__)
 
     def run(self):
 
@@ -54,8 +61,7 @@ class MiaouFramework:
 
             self.results_dict[data.name] = {}
 
-            print(f"Running the analysis for {data.name} ...")
-            print(f"Loading the data from {data.value} ...")
+            logging.info(f"Loading data for {data.name} ...")
 
             time_series = self._load_data(data.value)
 
@@ -63,12 +69,13 @@ class MiaouFramework:
 
             for period, dates_tuple in self.set_dates[str(data.name)].items():
 
+                logging.info(f"Calculating the crash probability for {period} ...")
+
                 self.results_dict[data.name][period] = {}
                 self.results_dict[data.name][period]["confidence"] = pd.Series(dtype=float)
                 self.results_dict[data.name][period]["price"] = pd.Series(dtype=float)
                 
                 start_date, end_date = dates_tuple
-                print(f"Calculating the crash probability of {period} from {start_date} to {end_date} ...")
 
                 start_date_dt = pd.to_datetime(start_date)
                 end_date_dt = pd.to_datetime(end_date)
@@ -77,16 +84,19 @@ class MiaouFramework:
                 end_idx = pd.DatetimeIndex(timestamp).get_indexer([end_date_dt], method='ffill')[0]
                 
                 # Select the time series  as : [t1 - window_lenght, t2]
-                sub_series = time_series[start_idx - self.window_lenght:end_idx]
+                sub_series = time_series[start_idx - self.window_length:end_idx]
 
-                for i in range(0, len(sub_series) - self.window_lenght, self.frequency):
+                for i in range(0, len(sub_series) - self.window_length, self.frequency):
                     
-                    
-                    window = sub_series[i:i + self.window_lenght]
+                    window = sub_series[i:i + self.window_length]
+
+                    logging.info(f"Window {i}: {window}")
 
                     confidence = self._compute_crash_proba(window[:, [0, 2]].astype(float))
-                    price = sub_series[i + self.window_lenght, 2]
-                    date = sub_series[i + self.window_lenght, 1]
+                    price = sub_series[i + self.window_length, 2]
+                    date = sub_series[i + self.window_length, 1]
+
+                    logging.info(f"\nWindow size {len(window)}= Confidence: {confidence}, Price: {price}, Date: {date}")
 
                     self.results_dict[data.name][period]["confidence"].at[date] = confidence
                     self.results_dict[data.name][period]["price"].at[date] = price
@@ -105,8 +115,12 @@ class MiaouFramework:
                 - Datetime 
                 - Time series data
         """
-        df = pd.read_csv(f'data/{file_path}', sep=",")
-        df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
+        try:
+            df = pd.read_csv(f'data/{file_path}', sep=",")
+            df["Date"] = pd.to_datetime(df["Date"], format="%Y-%m-%d").values.astype("datetime64[D]")
+        except Exception:
+            df = pd.read_csv(f'data/{file_path}', sep=",")
+            df["Date"] = pd.to_datetime(df["Date"], format="%m/%d/%Y").values.astype("datetime64[D]")
         df = df.sort_values(by="Date")
 
         t = np.linspace(0, len(df) - 1, len(df))
@@ -132,18 +146,24 @@ class MiaouFramework:
 
         crash_proba = 0
         for sub_start, sub_end, sub_data in sub_intervals:
+
+            self.optimizer.PARAM_BOUNDS = self.filtering_method.get_search_space(sub_start, sub_end)
+            logging.debug(f"\nSearch space: {self.optimizer.PARAM_BOUNDS}")
             _, bestParams = self.optimizer.fit(sub_start, sub_end, sub_data)
 
             model = self.optimizer.lppl_model(sub_data[:, 0], sub_data[:, 1], bestParams)
+            model.show(save=True, name=f"res/{sub_start}_{sub_end}")
             linear_params, non_linear_params = model.get_linear_params(), model.get_non_linear_params()
 
-            if self.filtering_method.is_valid(linear_params, non_linear_params):
-                crash_proba += 1
+            crash_proba += self.filtering_method.filter(linear_params, non_linear_params, sub_start, sub_end, sub_data[:, 1])
 
         return crash_proba / len(sub_intervals)
     
-    def visualize(self):
+    def visualize(self, save: bool = False):
         import matplotlib.pyplot as plt
+
+        matplotlib_logger = logging.getLogger('matplotlib')
+        matplotlib_logger.setLevel(logging.WARNING)  # ou ERROR si tu veux encore moins
 
         for asset, asset_data in self.results_dict.items():
             for period, period_data in asset_data.items():
@@ -151,10 +171,14 @@ class MiaouFramework:
 
                 dates = period_data["confidence"].index
 
+                # Fais une rolling 5 jours de confidence
+                period_data["confidence"] = period_data["confidence"].rolling(window=5).mean()
+
                 ax1.set_xlabel("Date")
                 ax1.set_ylabel("Confidence", color="tab:blue")
                 ax1.plot(dates, period_data["confidence"].values, color="tab:blue", label="Confidence")
                 ax1.tick_params(axis="y", labelcolor="tab:blue")
+                ax1.set_ylim(-0.5, 1)
 
                 ax2 = ax1.twinx()
                 ax2.set_ylabel("Price", color="tab:red")
@@ -164,4 +188,9 @@ class MiaouFramework:
                 plt.title(f"{asset} - {period}")
                 fig.tight_layout()
                 plt.show()
+
+                if save:
+                    fig.savefig(f"results/{asset}_{period}.png")
+                    plt.close(fig)
+
                         

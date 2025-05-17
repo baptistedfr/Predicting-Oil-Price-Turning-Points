@@ -71,8 +71,9 @@ class MiaouIntervals(SubIntervalsSelection):
 class DidouIntervals(SubIntervalsSelection):
 
     def __init__(self, 
-                 time_series: Tuple[np.ndarray, pd.Series], 
-                 minimal_length: int = 125):
+                 time_series: np.ndarray, 
+                 max_size: int = 750,
+                 min_size: int = 125):
         """
         Parameters:
             time_series (np.ndarray): 
@@ -81,7 +82,8 @@ class DidouIntervals(SubIntervalsSelection):
                 - Time series data
         """
         self.time_series = time_series
-        self.minimal_length = minimal_length
+        self.max_size = max_size
+        self.min_size = min_size
 
     def get_subintervals(self) -> List[Tuple[float, float, np.ndarray]]:
         """
@@ -94,13 +96,15 @@ class DidouIntervals(SubIntervalsSelection):
                 - end date as numeric value
                 - time series data
         """
-        time_start = self.time_series[0, 0]
-        time_end = self.time_series[-1, 0]
+        time_end = self.time_series[-1, 0] # time_end - 125 
+
+        begging = time_end - self.max_size
+        end = time_end - self.min_size
 
         subintervals = []
-        for sub_st in np.arange(time_start, time_end - self.minimal_length, 5):
+        for sub_st in np.arange(begging, end, 5):
             sub_end = time_end
-            mask = (self.time_series[:, 0] >= sub_st) & (self.time_series[:, 0] <= sub_end)
+            mask = (self.time_series[:, 0] >= sub_st) & (self.time_series[:, 0] <= time_end)
             sub_sample = self.time_series[mask]
             subintervals.append((sub_st, sub_end, sub_sample))
 

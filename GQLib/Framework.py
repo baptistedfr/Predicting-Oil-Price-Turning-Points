@@ -130,7 +130,7 @@ class Framework:
             Optimization results for each subinterval.
         """
         # Configure the params of the optimizer based on the frequency
-        optimizer.configure_params_from_frequency(self.frequency, optimizer.__class__.__name__)
+        optimizer.configure_params_from_frequency("daily", optimizer.__class__.__name__)
         # Select data sample
         sample = self.select_sample(self.data, time_start, time_end) 
 

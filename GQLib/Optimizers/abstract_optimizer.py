@@ -19,8 +19,10 @@ class Optimizer(ABC):
     Defines the interface for any optimizer used to fit LPPL parameters.
     """
 
+    INIT_BOUNDS = None
     PARAM_BOUNDS = None
     lppl_model = None
+
     @abstractmethod
     def __init__(self) -> None:
         pass
@@ -83,7 +85,7 @@ class Optimizer(ABC):
 
         fig.show()
 
-    def configure_params_from_frequency(self, frequency: str, optimizer_name : str):
+    def configure_params_from_frequency(self, optimizer_name : str):
         """
         Configure the optimizer's parameters based on the given frequency
 
@@ -101,14 +103,10 @@ class Optimizer(ABC):
         except FileNotFoundError:
             raise FileNotFoundError(f"Configuration file for {optimizer_name} not found.")
 
-        # Charger les paramètres liés à la fréquence
-        freq_key = f"{frequency.upper()}_PARAM_BOUNDS"
-        if freq_key in params:
-            self.PARAM_BOUNDS = params[freq_key]
 
         # Créer dynamiquement des attributs pour les autres paramètres globaux
         for key, value in params.items():
-            if key != freq_key:
+            if key not in ["DAILY_PARAM_BOUNDS", "WEEKLY_PARAM_BOUNDS"]:
                 setattr(self, key, value)
 
     def convert_param_bounds_lppls(self, end: float) -> np.ndarray:
@@ -126,7 +124,7 @@ class Optimizer(ABC):
             A 2D array of shape (3, 2) representing the bounds for each parameter.
         """
         return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
+            [self.PARAM_BOUNDS["t_c"][0],    self.PARAM_BOUNDS["t_c"][1]],
             [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]
         ], dtype=np.float64)
@@ -146,7 +144,7 @@ class Optimizer(ABC):
             A 2D array of shape (4, 2) representing the bounds for each parameter.
         """
         return np.array([
-            [self.PARAM_BOUNDS["t_c"][0] + end,    self.PARAM_BOUNDS["t_c"][1] + end],
+            [self.PARAM_BOUNDS["t_c"][0],    self.PARAM_BOUNDS["t_c"][1]],
             [self.PARAM_BOUNDS["omega"][0],       self.PARAM_BOUNDS["omega"][1]],
             [self.PARAM_BOUNDS["phi"][0],         self.PARAM_BOUNDS["phi"][1]],
             [self.PARAM_BOUNDS["alpha"][0],       self.PARAM_BOUNDS["alpha"][1]]

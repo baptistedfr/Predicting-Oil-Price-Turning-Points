@@ -3,6 +3,31 @@ import matplotlib.pyplot as plt
 from astropy.timeseries import LombScargle
 import json
 from .Models import LPPL
+from .filterings import AbstractFilter
+
+
+class LombFilter(AbstractFilter):
+
+    def filter(self, model_params: list) -> bool:
+        """
+        Filter the fit of the LPPL model based on the Lomb-Scargle periodogram.
+        Returns True if the time series is successfully filtered, False otherwise.
+
+        The model fit is considered valid if the Lomb-Scargle periodogram shows a significant peak
+        at the target frequency (omega / (2 * pi)).
+
+        The filtering process involves the following steps:
+            1. Compute the Lomb-Scargle periodogram for the residuals of the LPPL model.
+            2. Filter the frequencies and their power based on validity criteria.
+            3. Check if the target frequency is statistically significant.
+
+        Parameters:
+            model_params (list): list of model parameters [t_c, omega, alpha]
+
+        Returns:
+            bool: True if the time series is filtered, False otherwise
+        """
+
 
 class LombAnalysis:
     """
@@ -52,7 +77,6 @@ class LombAnalysis:
 
         dt = np.abs(self.lppl.tc - self.lppl.t)
         return np.log(dt)
-
 
     def show_residuals(self, ax=None, show: bool = False) -> None:
         """
@@ -207,7 +231,6 @@ class LombAnalysis:
         else:
             return False
         
-
     def show_residuals(self, ax=None, show: bool = False) -> None:
         """
         Visualize the residuals of the LPPL model.

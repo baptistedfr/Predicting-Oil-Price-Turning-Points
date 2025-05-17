@@ -54,7 +54,7 @@ class LPPLS:
     def __repr__(self):
         return f"LPPLS(t={self.t}, y={self.y}, tc={self.tc}, omega={self.omega}, alpha={self.alpha})"
 
-    def show(self):
+    def show(self, save: bool = False, name: str = "LPPLS"):
         """
         Plot the observed data and the fitted LPPL model.
         """
@@ -64,6 +64,8 @@ class LPPLS:
         plt.xlabel("Time")
         plt.ylabel("Log(Price)")
         plt.legend()
+        if save:
+            plt.savefig(f"{name}.png")
         plt.show()
 
     def _compute_f_g_h(self):
