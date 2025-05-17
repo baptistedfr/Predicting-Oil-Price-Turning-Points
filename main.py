@@ -19,3 +19,4 @@ framework = MiaouFramework(
     window_lenght=300
 )
 framework.run()
+framework.visualize()

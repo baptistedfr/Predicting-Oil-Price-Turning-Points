@@ -71,10 +71,3 @@ class LPPLSConfidence(AbstractFilter):
         Compute the damping factor based on the LPPLS parameters.
         """
         return (alpha * omega) / (2 * np.pi) * np.exp(-omega * t_c)
-
-
-lend = 100
-len_window = 10
-freq = 1
-for i in range(0, lend - len_window, freq):
-    print(i)
