@@ -96,7 +96,7 @@ class AssetProcessor:
             for optimizer in optimizers:
                     model_associated.append(optimizer.lppl_model.__name__)
                     logging.info(f"\nRunning process for {optimizer.__class__.__name__}")
-                    optim_results[optimizer.__class__.__name__] = self.run_optimizer(fw, start_date, end_date, optimizer, self.real_tcs[idx], rerun)
+                    optim_results[optimizer.__class__.__name__] = self.run_optimizer(fw, start_date, end_date, optimizer, self.real_tcs[idx], rerun, save)
 
             results[set_name] = optim_results
 
@@ -130,7 +130,7 @@ class AssetProcessor:
             json.dump(results, file, indent=4, cls=ResultEncoder)
         logging.info(f"Results saved to Venise_Results/{self.input_type.value}_metrics.json")
 
-    def run_optimizer(self, fw: Framework, start_date: datetime, end_date: datetime, optimizer: Optimizer, real_tc: float, rerun: bool = False) -> Dict:
+    def run_optimizer(self, fw: Framework, start_date: datetime, end_date: datetime, optimizer: Optimizer, real_tc: float, rerun: bool = False, save: bool = False) -> Dict:
         """
         Run the optimizer on the data, filter the resulting turning points, analyse and save the results.
 
@@ -145,14 +145,16 @@ class AssetProcessor:
             Dict: A dictionary containing the information about the turning points distribution.
         """
         real_tc_numeric = self._translate_tc_to_numeric(real_tc, fw)
+        start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
+        end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
+        filename = f"Results/results_{self.input_type.value}/{optimizer.__class__.__name__}/daily/{optimizer.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.json"
 
         if rerun:
             run_results = fw.process(start_date, end_date, optimizer)
             filtered_results = fw.analyze(results=run_results, lppl_model=optimizer.lppl_model)
+            if save:
+                fw.save_results(run_results, filename)
         else:
-            start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
-            end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
-            filename = f"Results/results_{self.input_type.value}/{optimizer.__class__.__name__}/daily/{optimizer.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.json"
             with open(filename, "r") as f:
                 run_results = json.load(f)
             filtered_results = fw.analyze(result_json_name=filename, lppl_model=optimizer.lppl_model)
@@ -162,6 +164,7 @@ class AssetProcessor:
             fw.visualize_tc(filtered_results, "Test", "WTI", start_date, forward_end_date, real_tc=real_tc)
 
         return self._compute_tc_metrics(run_results, filtered_results, real_tc_numeric, fw.data[-1, 0])
+    
     
     @with_spinner("Computing metrics...")
     def _compute_tc_metrics(self, run_results: List[Dict], filtered_results: List[Dict], real_tc: float, end_date: float) -> Dict:
