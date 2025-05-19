@@ -9,7 +9,7 @@ configure_logger("INFO")
 wti = AssetProcessor(input_type = InputType.WTI)
 
 wti.compare_optimizers(frequency = "daily",
-                        optimizers =  [NELDER_MEAD(LPPLS)],
+                        optimizers =  [NELDER_MEAD(LPPLS), SA(LPPLS)],
                         significativity_tc=0.3,
                         rerun = False,
                         nb_tc = 10,
