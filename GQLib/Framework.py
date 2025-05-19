@@ -19,6 +19,7 @@ import logging
 from GQLib.logging import with_spinner
 import matplotlib.dates as mdates
 from scipy.stats import gaussian_kde
+import seaborn as sns
 
 
 logger = logging.getLogger(__name__)
@@ -845,7 +846,7 @@ class Framework:
 
         pio.write_image(fig, filename, scale=5, width=1000, height=800)
 
-    def _base(self, start_date: str, end_date: str, real_tc: str = None, title: str = None) -> tuple:
+    def _base(self, start_training: str, end_date: str, real_tc: str = None, title: str = None) -> tuple:
         """
         Trace le prix + t1, t2, real_tc et retourne fig, ax
         avec zorder élevés par défaut.
@@ -1046,41 +1047,70 @@ class Framework:
 
     def _add_lppl_fit(self, fig, ax, dict_results: dict, nb_calib: int = 3, window_extension: int = 1000):
         """
-        Ajoute les courbes de fit LPPL/LPPLS au graphique de base.
-
-        Parameters
-        ----------
-        fig : matplotlib.figure.Figure
-            La figure sur laquelle on travaille.
-        ax : matplotlib.axes.Axes
-            L'axe principal (celui des prix) pour y superposer les fits.
-        lppl_models : list of LPPL or LPPLS
-            Liste d'instances de modèles LPPL(S) déjà calibrés.
+        Ajoute les courbes de fit LPPL/LPPLS et leurs intervalles en bas du graphique,
+        triés par longueur de sous-intervalle et espacés verticalement.
         """
         calib_set = dict_results["Set 1"]["NELDER_MEAD"]["raw_run_result"]
+        # Échantillonnage aléatoire
         indices = random.sample(range(len(calib_set)), nb_calib)
-        calib_set_selected = [calib_set[i] for i in indices]
+        selected = [calib_set[i] for i in indices]
 
-        for i in range(nb_calib):
-            info = calib_set_selected[i]
-            mask   = [(info["sub_start"] <= t <= info["sub_end"]) for t in self.global_times]
-            prices = [p for p, m in zip(self.global_prices, mask) if m]
-            
-            lppl = LPPLS(params=info["bestParams"], 
-                         t= np.linspace(info["sub_start"], info["sub_end"], len(prices)),
-                         y=np.array(prices))
-            
-            mask   = [(info["sub_start"] <= t <= info["sub_end"] + window_extension) for t in self.global_times]
-            dates = [p for p, m in zip(self.global_dates, mask) if m]
-            lppl.t = np.array([p for p, m in zip(self.global_times, mask) if m])
+        # Constituer et trier la liste des intervalles (longueur décroissante)
+        intervals = []  # (length, start_idx, end_idx, info)
+        for info in selected:
+            # convertir en int sûr
+            start_idx = int(round(info["sub_start"]))
+            end_idx = int(round(info["sub_end"]))
+            length = end_idx - start_idx
+            intervals.append((length, start_idx, end_idx, info))
+        intervals.sort(key=lambda x: (-x[0], x[1]))
 
+        # Calcul des positions verticales pour les hlines
+        ymin, ymax = ax.get_ylim()
+        total_h = ymax - ymin
+        band_h = 0.20* total_h
+        y_base = ymin + 0.05 * total_h
+
+        colors = sns.dark_palette("navy", n_colors=len(intervals), reverse=False)
+
+        for idx, (length, start_idx, end_idx, info) in enumerate(intervals):
+            # 1) Calibration LPPLS
+            mask_cal = [(start_idx <= t <= end_idx) for t in self.global_times]
+            dates_cal = [d for d, m in zip(self.global_dates, mask_cal) if m]
+            prices_cal = [p for p, m in zip(self.global_prices, mask_cal) if m]
+
+            t_cal = np.linspace(start_idx, end_idx, len(prices_cal))
+            model = LPPLS(params=info["bestParams"], t=t_cal, y=np.array(prices_cal))
+
+            # 2) Fenêtre étendue pour fit
+            mask_ext = [(start_idx <= t <= end_idx + window_extension) for t in self.global_times]
+            dates_ext = [d for d, m in zip(self.global_dates, mask_ext) if m]
+            model.t = np.array([t for t, m in zip(self.global_times, mask_ext) if m])
+
+            # Tracé du fit en brut
+            y_pred = model.predict(include_oscillation=True)
             ax.plot(
-                dates,
-                lppl.predict(),
+                dates_ext,
+                y_pred,
                 linestyle="--",
                 linewidth=2,
-                label=f"{lppl.__name__} (tc={self.global_dates[int(lppl.tc)].strftime('%d-%m-%Y')})",
+                color=colors[idx % len(colors)],
+                label=self.global_dates[int(round(model.tc))].strftime('%d/%m/%Y')
             )
 
-        ax.legend(title="LPPL Fits", loc="upper left", fontsize=10)
+            # 3) Tracé de l'intervalle original
+            start_date = self.global_dates[start_idx]
+            end_idx_clamped = min(end_idx, len(self.global_dates) - 1)
+            end_date = self.global_dates[end_idx_clamped]
+            y_pos = y_base + idx * (band_h / max(1, nb_calib - 1))
+            ax.hlines(
+                y=y_pos,
+                xmin=start_date,
+                xmax=end_date,
+                colors="black",
+                linewidth=4,
+                alpha=0.8
+            )
+
+        ax.legend(title="Fits LPPL & Intervalles", loc="upper left", fontsize=10)
         fig.autofmt_xdate()
