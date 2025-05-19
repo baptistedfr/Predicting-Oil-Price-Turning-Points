@@ -8,16 +8,17 @@ import numpy as np
 
 
 
-wti = AssetProcessor(input_type = InputType.BTC)
+wti = AssetProcessor(input_type = InputType.SP500)
 
 
-# wti.compare_optimizers(frequency = "daily",
-#                             optimizers =  [SA(LPPLS), PSO(LPPLS), MPGA(LPPLS),SGA(LPPLS), TABU(LPPLS), FA(LPPLS), NELDER_MEAD(LPPLS)],
-#                             significativity_tc=0.3,
-#                             rerun = False,
-#                             nb_tc = 10,
-#                             save=False,
-#                             save_plot=False)
+wti.compare_optimizers(frequency = "daily",
+                            optimizers =  [SA(LPPL), PSO(LPPL), MPGA(LPPL),SGA(LPPL), TABU(LPPL), FA(LPPL), NELDER_MEAD(LPPL)],
+                            significativity_tc=0.3,
+                            rerun = False,
+                            nb_tc = 10,
+                            save=False,
+                            save_plot=False)
+
 
 # wti.compare_optimizers(frequency = "daily",
 #                             optimizers =  [SA(LPPLS), PSO(LPPLS), MPGA(LPPLS),SGA(LPPLS), TABU(LPPLS), FA(LPPLS), NELDER_MEAD(LPPLS)],
