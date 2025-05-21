@@ -4,6 +4,14 @@ from astropy.timeseries import LombScargle
 import json
 from .Models import LPPL
 
+with open("params/lomb.json", "r") as file:
+    lomb_params = json.load(file)
+
+QUANTILE_STATUS = lomb_params["QUANTILE_STATUS"]
+NB_TC = lomb_params["NB_TC"]
+SIGNIFICATIVITY_THRESHOLD = lomb_params["SIGNIFICATIVITY_THRESHOLD"]
+
+
 class LombAnalysis:
     """
     A class to perform Lomb-Scargle periodogram analysis on a time series.
@@ -67,6 +75,7 @@ class LombAnalysis:
         """
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
+
 
         ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
         ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
@@ -178,7 +187,7 @@ class LombAnalysis:
 
         return self.filtered_freqs, self.filtered_power
     
-    def check_significance(self, significativity_tc : float = 0.3) -> bool:
+    def check_significance(self) -> bool:
         """
         Check if the target frequency is statistically significant.
 
@@ -203,7 +212,7 @@ class LombAnalysis:
 
         if len(self.filtered_power) > 0:
             idx = np.argmax(self.filtered_power)
-            return abs(self.filtered_freqs[idx] - self.target_freq) < significativity_tc
+            return abs(self.filtered_freqs[idx] - self.target_freq) < SIGNIFICATIVITY_THRESHOLD
         else:
             return False
         
@@ -222,16 +231,16 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        test = self.lppl.compute_residuals(False)
+        #test = self.lppl.compute_residuals(False)
 
-        # test to list into a json
-        test_list = test.tolist()
+        # # test to list into a json
+        # test_list = test.tolist()
 
-        with open('residuals.json', 'w') as f:
-            json.dump(test_list, f)
+        # with open('residuals.json', 'w') as f:
+        #     json.dump(test_list, f)
 
-        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals without Oscillation", color="blue")
-        ax.plot(self.new_t, self.lppl.compute_residuals(True), label="Residuals with Oscillation", color="red")
+        ax.plot(self.new_t, self.lppl.compute_residuals(False), label="Residuals with oscillation", color="black")
+        ax.plot(self.new_t, self.lppl.compute_oscillations(), label="Theoretical oscillation", color="blue", linewidth=3, alpha=0.8)
         ax.set_xlabel("Time (ln(tc - t))")
         ax.set_ylabel("Residuals")
         ax.set_title("LPPL Residuals")
@@ -245,7 +254,7 @@ class LombAnalysis:
                       show: bool = False,
                       use_filtered: bool = False,
                       show_threshold: bool = False,
-                      show_max_power: bool = False,
+                      show_max_power: bool = True,
                       highlight_freq: bool = False) -> None:
         """
         Visualize the Lomb-Scargle power spectrum.
@@ -288,7 +297,7 @@ class LombAnalysis:
         if ax is None:
             fig, ax = plt.subplots(figsize=(10, 6))
 
-        ax.plot(freqs_plot, power_plot, label="Lomb-Scargle Power", color="blue")
+        ax.plot(freqs_plot, power_plot, label="Lomb-Scargle Power", color="black")
         ax.set_xlabel("Frequency")
         ax.set_ylabel("Power")
         ax.set_title(title)
@@ -298,17 +307,19 @@ class LombAnalysis:
             ax.axhline(y=self.critical_value, color="red", linestyle="--",
                         label=f"Significance threshold={self.critical_value:.2f}")
 
+
+
         if highlight_freq:
             ax.axvline(x=self.target_freq, color="green", linestyle=":", 
                         label=f"Highlighted freq={self.target_freq:.4f}")
-            ax.axvline(x=self.target_freq + 0.05, color="gray", linestyle=":")
-            ax.axvline(x=self.target_freq - 0.05, color="gray", linestyle=":")
+            ax.axvline(x=self.target_freq + SIGNIFICATIVITY_THRESHOLD, color="darkgray", linestyle=":")
+            ax.axvline(x=self.target_freq - SIGNIFICATIVITY_THRESHOLD, color="darkgray", linestyle=":")
 
         if show_max_power:
             idx_peak = np.argmax(power_plot)
             best_freq = freqs_plot[idx_peak]
-            ax.axvline(x=best_freq, color="orange", linestyle="--", label="Max Power")
-            
+            #ax.axvline(x=best_freq, color="orange", linestyle="--", label="Max Power")
+            #ax.plot(idx_peak, best_freq, color="orange")
 
         ax.legend()
 

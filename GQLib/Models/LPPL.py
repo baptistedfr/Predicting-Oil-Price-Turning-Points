@@ -109,6 +109,7 @@ class LPPL:
             self.A, self.B, self.C = np.linalg.inv(V.T @ V) @ (V.T @ self.y)
         except np.linalg.LinAlgError:
             self.A, self.B, self.C = np.nan, np.nan, np.nan
+
     def predict(self, include_oscillation: bool = True) -> np.ndarray:
         """
         Predict values using the LPPL model.
@@ -146,6 +147,9 @@ class LPPL:
             Residuals (observed - predicted).
         """
         return self.y - self.predict(include_oscillation)
+    
+    def compute_oscillations(self):
+        return self.predict(True) - self.predict(False)
 
     def compute_rss(self) -> float:
         """

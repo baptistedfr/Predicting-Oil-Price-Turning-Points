@@ -70,6 +70,7 @@ class AssetProcessor:
                            nb_tc : int = 20,
                            rerun: bool = False,
                            save: bool = False,
+                           save_metrics: bool = False,
                            save_plot : bool = False) -> None:
         """
         Compare the performance of different optimizers on the same data set over multiple date ranges.
@@ -125,10 +126,11 @@ class AssetProcessor:
                 elif isinstance(obj, np.ndarray):
                     return obj.tolist()
                 return super().default(obj)
-    
-        with open(f"Venise_Results/{self.input_type.value}_metrics.json", "w") as file:
-            json.dump(results, file, indent=4, cls=ResultEncoder)
-        logging.info(f"Results saved to Venise_Results/{self.input_type.value}_metrics.json")
+
+        if save_metrics:
+            with open(f"Venise_Results_old/{self.input_type.value}_metrics.json", "w") as file:
+                json.dump(results, file, indent=4, cls=ResultEncoder)
+            logging.info(f"Results saved to Venise_Results_old/{self.input_type.value}_metrics.json")
 
     def run_optimizer(self, fw: Framework, start_date: datetime, end_date: datetime, optimizer: Optimizer, real_tc: float, rerun: bool = False, save: bool = False) -> Dict:
         """
@@ -147,7 +149,7 @@ class AssetProcessor:
         real_tc_numeric = self._translate_tc_to_numeric(real_tc, fw)
         start_date_obj = datetime.strptime(start_date, "%d/%m/%Y")
         end_date_obj = datetime.strptime(end_date, "%d/%m/%Y")
-        filename = f"Results/results_{self.input_type.value}/{optimizer.__class__.__name__}/daily/{optimizer.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.json"
+        filename = f"Results_old/results_{self.input_type.value}/{optimizer.__class__.__name__}/daily/{optimizer.lppl_model.__name__}_{start_date_obj.strftime('%m-%Y')}_{end_date_obj.strftime('%m-%Y')}.json"
 
         if rerun:
             run_results = fw.process(start_date, end_date, optimizer)
