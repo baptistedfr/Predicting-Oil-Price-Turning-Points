@@ -1018,9 +1018,10 @@ class Framework:
                 kde  = gaussian_kde(nums)
                 alpha = 0.9
 
-
+            
             dens = kde(date_grid)
             # mise à l'échelle
+            print(dens)
             dens = dens / dens.max() * width_scale
             y0   = idx * spacing
 
@@ -1125,4 +1126,262 @@ class Framework:
         ax.legend(title="Fits LPPL & Intervalles" if subintervals else "Fits LPPL", loc="upper left", fontsize=10)
         fig.autofmt_xdate()
 
+        return fig, ax
+    
+
+    def _add_multi_half_violins(
+        self,
+        fig,
+        ax,
+        dict_results,
+        specifics: list[str],
+        hatch_patterns: list[str],
+        colors: list[str],
+        text_flags: list[bool],
+        width_scale: float = 0.5,
+        spacing: float = 0.5,
+        limit: str = None
+    ):
+        """
+        Trace plusieurs demi-violons (pour chaque 'specific') superposés par algorithme,
+        sur un même axe secondaire, en conservant la vraie amplitude relative.
+        
+        Parameters
+        ----------
+        fig, ax : matplotlib Figure, Axes
+        dict_results : dict
+            {algo: {specific1: [...], specific2: [...], ...}, ...}
+        specifics : list of str
+            Les clés des distributions à tracer, ex. ["tc_distrib_non_significant",
+            "tc_distrib_significant", "tc_distrib_significant_power"].
+        hatch_patterns : list of str
+            Motifs de hachures, un par élément de `specifics`.
+        colors : list of str
+            Couleurs de fond (ici blanc, gris clair, gris) un par élément de `specifics`.
+        text_flags : list of bool
+            Pour chaque specific, True => afficher le label `algo`.
+        width_scale : float
+            Échelle de la largeur max du plus large demi‐violon.
+        spacing : float
+            Écart vertical entre chaque algorithme.
+        limit : str, optional
+            Date sous forme "dd/mm/YYYY" à gauche de laquelle tout est coupé.
+        """
+        # 1) calcul de la limite
+        if limit:
+            lim_dt = pd.to_datetime(limit, format="%d/%m/%Y")
+            idxs = np.where(np.array(self.global_dates) == lim_dt)[0]
+            limit_num = mdates.date2num(self.global_dates[idxs[0]]) if len(idxs) else None
+        else:
+            limit_num = None
+
+        # 2) axe secondaire sous l'axe principal
+        ax_v = ax.twinx()
+        ax_v.set_zorder(0)
+        ax.set_zorder(1)
+        ax_v.patch.set_alpha(0)
+        ax_v.set_yticks([])
+        ax_v.set_ylabel("")
+
+        # 3) normaliser global_dates en datetime
+        global_dates = [
+            pd.to_datetime(d, format="%d/%m/%Y") if isinstance(d, str) else d
+            for d in self.global_dates
+        ]
+
+        # 4) collecter toutes les séries brutes
+        nums_data: dict[tuple[str,str], np.ndarray] = {}
+        for algo, vals in dict_results.items():
+            for spec in specifics:
+                raw = vals.get(spec, [])
+                if not raw:
+                    nums = np.array([])
+                else:
+                    idxs = [int(round(i)) for i in raw]
+                    idxs = [min(i, len(global_dates)-1) for i in idxs]
+                    dates = [global_dates[i] for i in idxs]
+                    nums  = mdates.date2num(dates)
+                nums_data[(algo, spec)] = nums
+
+        # 5) déterminer la grille commune
+        all_nums = [arr for arr in nums_data.values() if arr.size>0]
+        if not all_nums:
+            return fig, ax
+        mn = min(a.min() for a in all_nums)
+        mx = max(a.max() for a in all_nums)
+        full_grid = np.linspace(mn, mx, 200)
+        if limit_num is not None:
+            date_grid = full_grid[full_grid>=limit_num]
+        else:
+            date_grid = full_grid
+        if date_grid.size == 0:
+            return fig, ax
+
+        # 6) calculer toutes les densités crues et trouver le max global
+        dens_raws: dict[tuple[str,str], np.ndarray] = {}
+        global_max = 0.0
+        for key, nums in nums_data.items():
+            if nums.size > 1:
+                kde = gaussian_kde(nums)
+                dens = kde(date_grid)
+            else:
+                dens = np.zeros_like(date_grid)
+            dens_raws[key] = dens
+            global_max = max(global_max, dens.max())
+
+        if global_max == 0:
+            return fig, ax
+
+        # 7) tracer par algorithme
+        max_y = -np.inf
+        for idx, algo in enumerate(dict_results):
+            y0 = idx * spacing
+            # ligne de base
+            xmin = limit_num if limit_num is not None else mn
+            ax_v.hlines(y=y0, xmin=xmin, xmax=mx, colors="black", linewidth=0.5)
+            # superpose chaque distribution
+            for j, spec in enumerate(specifics):
+                dens = dens_raws[(algo, spec)]
+                # mise à l'échelle relative
+                dens_scaled = dens / global_max * width_scale
+                poly = ax_v.fill_between(
+                    date_grid, y0, y0+dens_scaled,
+                    facecolor=colors[j],
+                    edgecolor="black",
+                    linewidth=0.8,
+                    alpha=0.9,
+                    zorder=0
+                )
+                poly.set_hatch(hatch_patterns[j])
+                ax_v.plot(
+                    date_grid, y0+dens_scaled,
+                    color="black", linewidth=1.0, zorder=1
+                )
+                # label uniquement si text_flags[j] est True
+                if text_flags[j]:
+                    ax_v.text(
+                        mx + (mx-xmin)*0.01,
+                        y0 + dens_scaled.max()*0.5,
+                        algo.replace("_", "\n"),
+                        va="center", ha="left",
+                        zorder=2
+                    )
+            max_y = max(max_y, y0 + width_scale)
+
+        # 8) finalisation
+        ax_v.set_ylim(-spacing*0.5, max_y + spacing*0.5)
+        ax_v.xaxis_date()
+        fig.autofmt_xdate()
+        return fig, ax
+        
+    def _add_multi_half_violins3(
+        self,
+        fig,
+        ax,
+        dict_results,
+        specifics: list[str],
+        hatch_patterns: list[str],
+        colors: list[str],
+        text_flags: list[bool],
+        width_scale: float = 0.5,
+        spacing: float = 0.5,
+        limit: str = None
+    ):
+        """
+        Même qu'avant, mais on normalise chaque algorithme sur son propre maximum
+        de densité (tous ses 'specifics' confondus).
+        """
+        # 1) calcul de la limite en float
+        if limit:
+            lim_dt = pd.to_datetime(limit, format="%d/%m/%Y")
+            idxs = np.where(np.array(self.global_dates) == lim_dt)[0]
+            limit_num = mdates.date2num(self.global_dates[idxs[0]]) if len(idxs) else None
+        else:
+            limit_num = None
+
+        # 2) axe secondaire
+        ax_v = ax.twinx()
+        ax_v.set_zorder(0); ax.set_zorder(1)
+        ax_v.patch.set_alpha(0); ax_v.set_yticks([]); ax_v.set_ylabel("")
+
+        # 3) convertir global_dates en datetime
+        global_dates = [
+            pd.to_datetime(d, format="%d/%m/%Y") if isinstance(d, str) else d
+            for d in self.global_dates
+        ]
+
+        # 4) collecter nums pour chaque (algo, spec)
+        nums_data = {}
+        for algo, vals in dict_results.items():
+            for spec in specifics:
+                raw = vals.get(spec, [])
+                if not raw:
+                    nums = np.array([])
+                else:
+                    idxs = [min(int(round(i)), len(global_dates)-1) for i in raw]
+                    dates = [global_dates[i] for i in idxs]
+                    nums  = mdates.date2num(dates)
+                nums_data[(algo, spec)] = nums
+
+        # 5) grille commune
+        all_nonempty = [arr for arr in nums_data.values() if arr.size>0]
+        if not all_nonempty:
+            return fig, ax
+        mn, mx = min(a.min() for a in all_nonempty), max(a.max() for a in all_nonempty)
+        full_grid = np.linspace(mn, mx, 200)
+        date_grid = full_grid[full_grid>=limit_num] if limit_num is not None else full_grid
+        if date_grid.size == 0:
+            return fig, ax
+
+        # 6) calculer densités brutes et maxima par algorithme
+        dens_raws = {}
+        algo_max = { algo: 0.0 for algo in dict_results }
+        for (algo, spec), nums in nums_data.items():
+            if nums.size > 1:
+                dens = gaussian_kde(nums)(date_grid)
+            else:
+                dens = np.zeros_like(date_grid)
+            dens_raws[(algo, spec)] = dens
+            algo_max[algo] = max(algo_max[algo], dens.max())
+
+        # 7) tracé
+        max_y = -np.inf
+        for idx, algo in enumerate(dict_results):
+            y0 = idx * spacing
+            xmin = limit_num if limit_num is not None else mn
+            ax_v.hlines(y=y0, xmin=xmin, xmax=mx, colors="black", linewidth=0.5)
+
+            # normaliser sur le maximum de cet algo
+            scale = algo_max[algo] if algo_max[algo] > 0 else 1.0
+
+            for j, spec in enumerate(specifics):
+                dens = dens_raws[(algo, spec)]
+                dens_scaled = dens / scale * width_scale
+
+                poly = ax_v.fill_between(
+                    date_grid, y0, y0 + dens_scaled,
+                    facecolor=colors[j], edgecolor="black",
+                    linewidth=0.8, alpha=0.9, zorder=0
+                )
+                poly.set_hatch(hatch_patterns[j])
+
+                ax_v.plot(
+                    date_grid, y0 + dens_scaled,
+                    color="black", linewidth=1.0, zorder=1
+                )
+
+                if text_flags[j]:
+                    ax_v.text(
+                        mx + (mx-xmin)*0.01,
+                        y0 + dens_scaled.max()*0.5,
+                        algo.replace("_", "\n"),
+                        va="center", ha="left", zorder=2
+                    )
+
+            max_y = max(max_y, y0 + width_scale)
+
+        # 8) finalisation
+        ax_v.set_ylim(-spacing*0.5, max_y + spacing*0.5)
+        ax_v.xaxis_date()
+        fig.autofmt_xdate()
         return fig, ax
